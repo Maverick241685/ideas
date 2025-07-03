@@ -3,148 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tournament Manager</title>
+    <title>Tournament Organizer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Tournament Manager</h1>
-        <button id="resetProgressBtn" class="reset-btn">Reset All Progress</button>
-        <div class="tournament-summary card">
-            <h2>Tournament Overview</h2>
-            <p>
-                This tournament features **40 players** competing through multiple intense rounds to crown the ultimate champion!
-            </p>
-            <h3>English Summary:</h3>
-            <ul>
-                <li>**Step 1: Player Entry** - Add up to 40 players.</li>
-                <li>**Step 2: Group Creation (Round Z1)** - Players are randomly divided into 8 groups of 5.</li>
-                <li>**Step 3: Round 1 (Z1) - Intra-Group Fights** - Each player fights everyone else within their group. Points are awarded for wins.</li>
-                <li>**Step 4: Score Display** - View scores from Round 1 for each group.</li>
-                <li>**Step 5: Round 2 Preparation** - Top 2 players from each of the 8 groups (16 players total) advance.</li>
-                <li>**Step 6 & 7: Round 2 (Z2) - Group vs. Group Fights** - The 16 players are randomly split into 4 new groups of 4. Then, Group 1 fights Group 4, and Group 2 fights Group 3. The 8 players from the 2 winning groups proceed.</li>
-                <li>**Step 8: Quarter-Final (Z3) - 2v2 Fights** - The 8 players are randomly paired into two 2v2 battles. The 4 winners advance.</li>
-                <li>**Semi-Final (Z4) - 1v1 Fights** - The 4 winners compete in two 1v1 matches. The 2 winners proceed to the Final.</li>
-                <li>**Final Round & Awards** - The two finalists battle for the championship. Prizes are awarded to the Champion, Runner-up, and the two Semi-Final losers.</li>
-            </ul>
-
-            <h3>Resumen en Español:</h3>
-            <ul>
-                <li>**Paso 1: Inscripción de Jugadores** - Añade hasta 40 jugadores.</li>
-                <li>**Paso 2: Creación de Grupos (Ronda Z1)** - Los jugadores se dividen aleatoriamente en 8 grupos de 5.</li>
-                <li>**Paso 3: Ronda 1 (Z1) - Peleas Intra-Grupo** - Cada jugador lucha contra todos los demás dentro de su grupo. Se otorgan puntos por victorias.</li>
-                <li>**Paso 4: Mostrar Puntuaciones** - Visualiza las puntuaciones de la Ronda 1 para cada grupo.</li>
-                <li>**Paso 5: Preparación para la Ronda 2** - Los 2 mejores jugadores de cada uno de los 8 grupos (16 jugadores en total) avanzan.</li>
-                <li>**Pasos 6 y 7: Ronda 2 (Z2) - Peleas de Grupo vs. Grupo** - Los 16 jugadores se dividen aleatoriamente en 4 nuevos grupos de 4. Luego, el Grupo 1 lucha contra el Grupo 4, y el Grupo 2 lucha contra el Grupo 3. Los 8 jugadores de los 2 grupos ganadores avanzan.</li>
-                <li>**Paso 8: Cuartos de Final (Z3) - Peleas 2v2** - Los 8 jugadores se emparejan aleatoriamente en dos batallas 2v2. Los 4 ganadores avanzan.</li>
-                <li>**Semifinal (Z4) - Peleas 1v1** - Los 4 ganadores compiten en dos partidos 1v1. Los 2 ganadores avanzan a la Final.</li>
-                <li>**Ronda Final y Premios** - Los dos finalistas luchan por el campeonato. Se otorgan premios al Campeón, al Subcampeón y a los dos perdedores de las Semifinales.</li>
-            </ul>
-
-            <hr>
-
-            <h3>Prize Summary (English):</h3>
-            <ul>
-                <li>**Champion:** 100M Food, 50M Iron, Best blessing from King</li>
-                <li>**Runner-up:** 50M Food, 25M Iron, Second best King blessing</li>
-                <li>**Semi-Finalists (2 players):** 25M Food, 10M Iron, 3rd best King blessing</li>
-            </ul>
-
-            <h3>Resumen de Premios (Español):</h3>
-            <ul>
-                <li>**Campeón:** 100M Comida, 50M Hierro, La mejor bendición del Rey</li>
-                <li>**Subcampeón:** 50M Comida, 25M Hierro, La segunda mejor bendición del Rey</li>
-                <li>**Semifinalistas (2 jugadores):** 25M Comida, 10M Hierro, La tercera mejor bendición del Rey</li>
-            </ul>
-        </div>
+        <h1>Tournament Organizer</h1>
 
         <section id="add-players-section" class="card">
-            <h2>Step 1: Add Players</h2>
-            <div class="input-group">
-                <input type="text" id="playerNameInput" placeholder="Enter player name(s) separated by commas">
-                <button id="addPlayerBtn">Add Player(s)</button>
+            <h2>Add Players (Max 40)</h2>
+            <div class="player-input-controls">
+                <div id="addPlayerControls">
+                    <label for="playerNameInput">Player Name:</label>
+                    <input type="text" id="playerNameInput" placeholder="Enter player name(s) (comma-separated)">
+                    <button id="addPlayerBtn">Add Player(s)</button>
+                </div>
             </div>
-            <div class="player-list-container">
-                <h3>Current Players (<span id="playerCount">0</span>/40)</h3>
-                <ul id="playerList">
-                    </ul>
+            <p>Current Players: <span id="playerCount">0</span>/40</p>
+            <ul id="playerList" class="player-list">
+                </ul>
+            <button id="createGroupsBtn" disabled>Create Groups (Start Round Z1)</button>
+        </section>
+
+        <section id="player-replacement-section" class="card" style="display: none;">
+            <h2>Replace Player</h2>
+            <div class="player-replacement-controls">
+                <input type="text" id="playerToReplaceInput" placeholder="Player to replace">
+                <input type="text" id="newPlayerNameInput" placeholder="New player's name">
+                <button id="replacePlayerBtn">Replace</button>
             </div>
-            <button id="createGroupsBtn" class="primary-btn" disabled>Create Groups (Need 40 Players)</button>
+            <p id="replacementStatusMessage"></p>
         </section>
 
         <section id="groups-section" class="card" style="display: none;">
-            <h2>Step 2: Create Groups (Round Z1)</h2>
+            <h2>Tournament Groups (Round Z1)</h2>
             <div id="groupsContainer" class="groups-grid">
                 </div>
-
-            <div id="player-replacement-section" class="card" style="display: none; margin-top: 20px;">
-                <h3>Replace a Player in a Group</h3>
-                <div class="input-group">
-                    <input type="text" id="playerToReplaceInput" placeholder="Player to replace (e.g., Player A)">
-                    <input type="text" id="newPlayerNameInput" placeholder="New player name (e.g., Player X)">
-                    <button id="replacePlayerBtn">Replace Player</button>
-                </div>
-                <p class="replacement-message" id="replacementStatusMessage"></p>
-            </div>
-            <button id="startRound1Btn" class="primary-btn" disabled>Start Round 1 (Z1)</button>
+            <button id="startRound1Btn" disabled>Start Round 1 Fights</button>
         </section>
 
         <section id="round1-section" class="card" style="display: none;">
-            <h2>Step 3: Round 1 (Z1) - Intra-Group Fights</h2>
-            <p>Each player in a group fights every other player in their group. Record scores below.</p>
+            <h2>Round 1 Fights (Group Stage)</h2>
             <div id="round1FightsContainer">
                 </div>
-            <button id="finishRound1Btn" class="primary-btn" disabled>Finish Round 1 & Show Scores</button>
+            <button id="finishRound1Btn" disabled>Finish Round 1</button>
         </section>
 
         <section id="round1-scores-section" class="card" style="display: none;">
-            <h2>Step 4: Round 1 Scores</h2>
-            <div id="round1ScoresContainer">
+            <h2>Round 1 Scores Summary</h2>
+            <div id="round1ScoresContainer" class="groups-grid">
                 </div>
-            <button id="selectTopPlayersBtn" class="primary-btn" disabled>Select Top 2 from Each Group</button>
+            <button id="selectTopPlayersBtn" disabled>Select Top 2 Players for Round 2</button>
         </section>
 
         <section id="round2-prep-section" class="card" style="display: none;">
-            <h2>Step 5: Players Proceeding to Round 2 (Z2)</h2>
-            <p>These 16 players have advanced:</p>
-            <ul id="advancedPlayersList">
+            <h2>Advanced Players (Round Z2 - Top 16)</h2>
+            <ul id="advancedPlayersList" class="player-list">
                 </ul>
-            <button id="startRound2Btn" class="primary-btn" disabled>Start Round 2 (Z2)</button>
+            <button id="startRound2Btn" disabled>Start Round 2 Fights</button>
         </section>
 
         <section id="round2-section" class="card" style="display: none;">
-            <h2>Step 6 & 7: Round 2 (Z2) - Group Fights</h2>
+            <h2>Round 2 Fights (Group vs Group)</h2>
             <div id="round2GroupsContainer" class="groups-grid">
                 </div>
             <div id="round2FightsContainer">
                 </div>
-            <button id="finishRound2Btn" class="primary-btn" disabled>Finish Round 2 & Proceed to Quarter-Finals</button>
+            <button id="finishRound2Btn" disabled>Finish Round 2</button>
         </section>
 
         <section id="quarter-final-section" class="card" style="display: none;">
-            <h2>Step 8: Quarter-Final (Z3) - 2v2 Fights</h2>
+            <h2>Quarter-Finals (Round Z3 - 2v2)</h2>
             <div id="quarterFinalFightsContainer">
                 </div>
-            <button id="finishQuarterFinalBtn" class="primary-btn" disabled>Finish Quarter-Final & Proceed to Semi-Final</button>
+            <button id="finishQuarterFinalBtn" disabled>Finish Quarter-Finals</button>
         </section>
 
         <section id="semi-final-section" class="card" style="display: none;">
-            <h2>Semi-Final (Z4) - 1v1 Fights</h2>
+            <h2>Semi-Finals (Round Z4 - 1v1)</h2>
             <div id="semiFinalFightsContainer">
                 </div>
-            <button id="finishSemiFinalBtn" class="primary-btn" disabled>Finish Semi-Final & Proceed to Final</button>
+            <button id="finishSemiFinalBtn" disabled>Finish Semi-Finals</button>
         </section>
 
         <section id="final-section" class="card" style="display: none;">
-            <h2>Final Round & Awards!</h2>
+            <h2>The Grand Final</h2>
             <div id="finalFightContainer">
                 </div>
-            <button id="showAwardsBtn" class="primary-btn" disabled>Show Awards</button>
-            <div id="awardsContainer" class="card awards-card" style="display: none;">
-                <h3>Tournament Prizes</h3>
+            <button id="showAwardsBtn" disabled>Show Awards</button>
+            <div id="awardsContainer" class="card awards-section" style="display: none;">
                 </div>
         </section>
 
+        <div class="footer-controls">
+            <button id="resetProgressBtn" class="reset-button">Reset All Progress</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
