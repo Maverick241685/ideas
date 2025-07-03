@@ -14,6 +14,7 @@ let semiFinalLosers = []; // Losers of Semi-Finals (2 players)
 // --- DOM Elements ---
 const playerNameInput = document.getElementById('playerNameInput');
 const addPlayerBtn = document.getElementById('addPlayerBtn');
+const addPlayerControls = document.getElementById('addPlayerControls'); // NEW: Reference to the new container
 const playerCountSpan = document.getElementById('playerCount');
 const playerList = document.getElementById('playerList');
 const createGroupsBtn = document.getElementById('createGroupsBtn');
@@ -38,7 +39,7 @@ const startRound2Btn = document.getElementById('startRound2Btn');
 const round2Section = document.getElementById('round2-section');
 const round2GroupsContainer = document.getElementById('round2GroupsContainer');
 const round2FightsContainer = document.getElementById('round2FightsContainer');
-const finishRound2Btn = document.getElementById('finishRound2Btn');
+const finishRound2Btn = document = document.getElementById('finishRound2Btn');
 
 const quarterFinalSection = document.getElementById('quarter-final-section');
 const quarterFinalFightsContainer = document.getElementById('quarterFinalFightsContainer');
@@ -68,7 +69,6 @@ const resetProgressBtn = document.getElementById('resetProgressBtn');
 
 function updatePlayerCount() {
     playerCountSpan.textContent = players.length;
-    // createGroupsBtn.disabled logic should remain the same
     createGroupsBtn.disabled = players.length !== MAX_PLAYERS;
 }
 
@@ -104,15 +104,23 @@ function showSection(sectionToShow) {
         sectionToShow.style.display = 'block';
     }
 
-    // THIS IS THE CRUCIAL PART: Explicitly control the add player input/button here
+    // NEW LOGIC: Control the visibility and disabled state more directly
     if (sectionToShow === addPlayersSection) {
-        playerNameInput.disabled = false;
-        addPlayerBtn.disabled = false;
+        addPlayerControls.style.display = 'block'; // Show the container
+        playerNameInput.disabled = false; // Ensure input is not disabled
+        addPlayerBtn.disabled = false; // Ensure button is not disabled
         playerReplacementSection.style.display = 'none'; // Ensure replacement is hidden
+        console.log('showSection: addPlayersSection active. Input/Button should be ENABLED.');
+        console.log('playerNameInput.disabled:', playerNameInput.disabled);
+        console.log('addPlayerBtn.disabled:', addPlayerBtn.disabled);
     } else {
+        addPlayerControls.style.display = 'none'; // Hide the container completely
+        // No need to explicitly set disabled if container is hidden, but for safety:
         playerNameInput.disabled = true;
         addPlayerBtn.disabled = true;
-        // Player replacement section visibility is managed elsewhere based on tournament stage
+        console.log('showSection: Not addPlayersSection. Input/Button should be DISABLED.');
+        console.log('playerNameInput.disabled:', playerNameInput.disabled);
+        console.log('addPlayerBtn.disabled:', addPlayerBtn.disabled);
     }
 }
 
@@ -160,10 +168,12 @@ function saveState() {
 }
 
 function loadState() {
+    console.log('Attempting to load state...');
     try {
         const savedState = localStorage.getItem('tournamentState');
         if (savedState) {
             const state = JSON.parse(savedState);
+            console.log('Saved state found:', state);
 
             // Restore primary data structures
             players.splice(0, players.length, ...(state.players || []));
@@ -235,9 +245,11 @@ function loadState() {
                 playerReplacementSection.style.display = 'none';
             }
 
-            console.log('Tournament state loaded successfully.');
+            console.log('Tournament state loaded successfully. Final Input/Button disabled state:');
+            console.log('playerNameInput.disabled:', playerNameInput.disabled);
+            console.log('addPlayerBtn.disabled:', addPlayerBtn.disabled);
         } else {
-            console.log('No saved tournament state found. Starting new tournament.');
+            console.log('No saved tournament state found. Starting new tournament. Calling showSection for add-players-section.');
             // Default to add-players-section if no state, and showSection will enable inputs
             showSection(addPlayersSection);
         }
@@ -846,4 +858,131 @@ finishSemiFinalBtn.addEventListener('click', () => {
     const sf2Loser = Array.from(fight2WinnerSelect.options).find(option => option.value !== "" && option.value !== sf2Winner)?.value;
 
     semiFinalWinners.push(sf1Winner, sf2Winner);
-    semiFinalLos
+    semiFinalLosers.push(sf1Loser, sf2Loser);
+
+    semiFinalLosers = semiFinalLosers.filter(loser => !semiFinalWinners.includes(loser));
+
+    if (semiFinalWinners.length !== 2 || semiFinalLosers.length !== 2) {
+        alert(`Error: Expected 2 finalists and 2 semi-final losers, but found ${semiFinalWinners.length} finalists and ${semiFinalLosers.length} losers.`);
+        return;
+    }
+
+    showSection(finalSection);
+    generateFinalFight();
+    saveState();
+});
+
+// --- Final Round & Awards ---
+function generateFinalFight() {
+    finalFightContainer.innerHTML = '';
+    const finalPlayers = shuffleArray([...semiFinalWinners]);
+
+    const fightElement = document.createElement('div');
+    fightElement.classList.add('knockout-fight-card');
+    fightElement.innerHTML = `
+        <h4>The Grand Final:</h4>
+        <div class="knockout-players">
+            <span>${finalPlayers[0]}</span>
+            <span class="knockout-vs">VS</span>
+            <span>${finalPlayers[1]}</span>
+        </div>
+        <div class="score-input" style="justify-content: center; margin-top: 15px;">
+            <label>Tournament Winner:</label>
+            <select id="final-winner">
+                <option value="">Select Winner</option>
+                <option value="${finalPlayers[0]}">${finalPlayers[0]}</option>
+                <option value="${finalPlayers[1]}">${finalPlayers[1]}</option>
+            </select>
+        </div>
+    `;
+    finalFightContainer.appendChild(fightElement);
+    showAwardsBtn.disabled = false;
+}
+
+showAwardsBtn.addEventListener('click', () => {
+    const finalWinnerSelect = document.getElementById('final-winner');
+    const winner = finalWinnerSelect.value;
+
+    if (winner === "") {
+        alert("Please select the Tournament Winner.");
+        return;
+    }
+
+    const finalist = semiFinalWinners.find(p => p !== winner);
+
+    awardsContainer.innerHTML = `<h3>Tournament Prizes</h3><ul></ul>`;
+    const ul = awardsContainer.querySelector('ul');
+
+    let liWinner = document.createElement('li');
+    liWinner.innerHTML = `<strong>${winner} (Champion):</strong> 100M Food, 50M Iron, Best blessing from King`;
+    ul.appendChild(liWinner);
+
+    let liFinalist = document.createElement('li');
+    liFinalist.innerHTML = `<strong>${finalist} (Runner-up):</strong> 50M Food, 25M Iron, Second best King blessing`;
+    ul.appendChild(liFinalist);
+
+    semiFinalLosers.forEach(loser => {
+        let liLoser = document.createElement('li');
+        liLoser.innerHTML = `<strong>${loser} (Semi-Finalist):</strong> 25M Food, 10M Iron, 3rd best King blessing`;
+    ul.appendChild(liLoser);
+    });
+
+    awardsContainer.style.display = 'block';
+    saveState();
+});
+
+// --- Reset Progress Logic ---
+resetProgressBtn.addEventListener('click', () => {
+    if (confirm("Are you sure you want to reset all tournament progress? This cannot be undone.")) {
+        localStorage.removeItem('tournamentState');
+        // Clear all arrays and objects
+        players.length = 0;
+        Object.keys(playerScores).forEach(key => delete playerScores[key]);
+        window.tournamentGroups = [];
+        advancedPlayers.length = 0;
+        round2Winners.length = 0;
+        quarterFinalWinners.length = 0;
+        semiFinalWinners.length = 0;
+        semiFinalLosers.length = 0;
+
+        // Reset UI to initial state
+        playerList.innerHTML = '';
+        playerNameInput.value = '';
+        replacementStatusMessage.textContent = '';
+        updatePlayerCount();
+        showSection(addPlayersSection); // Go back to the add players section, which will enable inputs
+        createGroupsBtn.disabled = true; // Ensure this is disabled until 40 players
+        startRound1Btn.disabled = true; // No groups yet
+        finishRound1Btn.disabled = true;
+        selectTopPlayersBtn.disabled = true;
+        startRound2Btn.disabled = true;
+        finishRound2Btn.disabled = true;
+        finishQuarterFinalBtn.disabled = true;
+        finishSemiFinalBtn.disabled = true;
+        showAwardsBtn.disabled = true;
+
+        groupsContainer.innerHTML = '';
+        round1FightsContainer.innerHTML = '';
+        round1ScoresContainer.innerHTML = '';
+        advancedPlayersList.innerHTML = '';
+        round2GroupsContainer.innerHTML = '';
+        round2FightsContainer.innerHTML = '';
+        quarterFinalFightsContainer.innerHTML = '';
+        semiFinalFightsContainer.innerHTML = '';
+        finalFightContainer.innerHTML = '';
+        awardsContainer.style.display = 'none';
+
+        // Also re-hide player replacement section
+        playerReplacementSection.style.display = 'none';
+
+        console.log("Tournament progress reset. Input/Button should now be ENABLED.");
+        console.log('playerNameInput.disabled:', playerNameInput.disabled);
+        console.log('addPlayerBtn.disabled:', addPlayerBtn.disabled);
+    }
+});
+
+
+// --- Initial Setup ---
+// The crucial part: Call loadState() first, and let it manage the initial section display.
+loadState(); // This will call showSection and try to activate the correct elements.
+updatePlayerCount(); // This will enable/disable createGroupsBtn correctly based on player count
