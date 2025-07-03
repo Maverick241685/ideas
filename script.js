@@ -52,12 +52,15 @@ const finalFightContainer = document.getElementById('finalFightContainer');
 const showAwardsBtn = document.getElementById('showAwardsBtn');
 const awardsContainer = document.getElementById('awardsContainer');
 
-// New DOM elements for replacement
+// Elements for replacement
 const playerReplacementSection = document.getElementById('player-replacement-section');
 const playerToReplaceInput = document.getElementById('playerToReplaceInput');
 const newPlayerNameInput = document.getElementById('newPlayerNameInput');
 const replacePlayerBtn = document.getElementById('replacePlayerBtn');
 const replacementStatusMessage = document.getElementById('replacementStatusMessage');
+
+// New: Reset button
+const resetProgressBtn = document.getElementById('resetProgressBtn');
 
 
 // --- Helper Functions ---
@@ -117,10 +120,146 @@ function renderGroups() {
     });
 }
 
+// --- State Persistence Functions ---
+function saveState() {
+    const state = {
+        players: players,
+        playerScores: playerScores,
+        tournamentGroups: window.tournamentGroups,
+        advancedPlayers: advancedPlayers,
+        round2Winners: round2Winners,
+        quarterFinalWinners: quarterFinalWinners,
+        semiFinalWinners: semiFinalWinners,
+        semiFinalLosers: semiFinalLosers,
+        // Get the ID of the currently visible section
+        currentSectionId: document.querySelector('section[style="display: block;"]')?.id || 'add-players-section'
+    };
+    try {
+        localStorage.setItem('tournamentState', JSON.stringify(state));
+        console.log('Tournament state saved.');
+    } catch (e) {
+        console.error('Error saving state to localStorage:', e);
+        alert('Could not save tournament progress. Your browser might be in private mode or storage is full.');
+    }
+}
+
+function loadState() {
+    try {
+        const savedState = localStorage.getItem('tournamentState');
+        if (savedState) {
+            const state = JSON.parse(savedState);
+
+            // Restore primary data structures
+            players.splice(0, players.length, ...(state.players || []));
+            Object.keys(playerScores).forEach(key => delete playerScores[key]); // Clear existing
+            Object.assign(playerScores, state.playerScores || {}); // Restore saved
+            window.tournamentGroups = state.tournamentGroups || [];
+            advancedPlayers.splice(0, advancedPlayers.length, ...(state.advancedPlayers || []));
+            round2Winners.splice(0, round2Winners.length, ...(state.round2Winners || []));
+            quarterFinalWinners.splice(0, quarterFinalWinners.length, ...(state.quarterFinalWinners || []));
+            semiFinalWinners.splice(0, semiFinalWinners.length, ...(state.semiFinalWinners || []));
+            semiFinalLosers.splice(0, semiFinalLosers.length, ...(state.semiFinalLosers || []));
+
+
+            // Update UI based on loaded state
+            updatePlayerCount(); // Updates the player counter and Create Groups button
+
+            // Re-list players if on the add-players section
+            playerList.innerHTML = ''; // Clear existing list
+            players.forEach(player => {
+                const listItem = document.createElement('li');
+                listItem.textContent = player;
+                playerList.appendChild(listItem);
+            });
+
+            // Re-render appropriate sections based on the stage of the tournament
+            if (state.currentSectionId) {
+                const currentSectionElement = document.getElementById(state.currentSectionId);
+                showSection(currentSectionElement); // Show the last active section
+
+                // Re-enable/re-render elements based on the loaded section
+                if (state.currentSectionId === 'groups-section') {
+                    if (window.tournamentGroups.length > 0) {
+                        renderGroups();
+                        createGroupsBtn.disabled = true; // Disable initial create button
+                        addPlayerBtn.disabled = true;
+                        playerNameInput.disabled = true;
+                        startRound1Btn.disabled = false;
+                        playerReplacementSection.style.display = 'block'; // Show replacement option
+                    }
+                } else if (state.currentSectionId === 'round1-section') {
+                    renderGroups(); // Groups must be rendered before fights
+                    generateRound1Fights();
+                    finishRound1Btn.disabled = false;
+                    createGroupsBtn.disabled = true; // Still disabled
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none'; // Hide replacement once round starts
+                } else if (state.currentSectionId === 'round1-scores-section') {
+                    renderGroups();
+                    displayRound1Scores();
+                    selectTopPlayersBtn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                } else if (state.currentSectionId === 'round2-prep-section') {
+                    advancedPlayersList.innerHTML = ''; // Clear before re-listing
+                    advancedPlayers.forEach(player => {
+                        const li = document.createElement('li');
+                        li.textContent = player;
+                        advancedPlayersList.appendChild(li);
+                    });
+                    startRound2Btn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                } else if (state.currentSectionId === 'round2-section') {
+                    generateRound2Fights();
+                    finishRound2Btn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                } else if (state.currentSectionId === 'quarter-final-section') {
+                    generateQuarterFinalFights();
+                    finishQuarterFinalBtn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                } else if (state.currentSectionId === 'semi-final-section') {
+                    generateSemiFinalFights();
+                    finishSemiFinalBtn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                } else if (state.currentSectionId === 'final-section') {
+                    generateFinalFight();
+                    showAwardsBtn.disabled = false;
+                    createGroupsBtn.disabled = true;
+                    addPlayerBtn.disabled = true;
+                    playerNameInput.disabled = true;
+                    playerReplacementSection.style.display = 'none';
+                }
+            }
+
+            console.log('Tournament state loaded successfully.');
+        } else {
+            console.log('No saved tournament state found. Starting new tournament.');
+        }
+    } catch (e) {
+        console.error('Error loading state from localStorage:', e);
+        alert('Could not load previous tournament progress. Starting a new tournament.');
+        localStorage.removeItem('tournamentState'); // Clear corrupted state
+    }
+}
+
 
 // --- Step 1: Add Players ---
 addPlayerBtn.addEventListener('click', () => {
-    // Split the input value by comma, trim whitespace, and filter out empty strings
     const newPlayerNames = playerNameInput.value.split(',')
         .map(name => name.trim())
         .filter(name => name !== '');
@@ -145,7 +284,7 @@ addPlayerBtn.addEventListener('click', () => {
         }
     });
 
-    playerNameInput.value = ''; // Clear the input field
+    playerNameInput.value = '';
     updatePlayerCount();
 
     let message = '';
@@ -161,6 +300,7 @@ addPlayerBtn.addEventListener('click', () => {
     if (message) {
         alert(message.trim());
     }
+    saveState();
 });
 
 playerNameInput.addEventListener('keypress', (event) => {
@@ -177,32 +317,31 @@ createGroupsBtn.addEventListener('click', () => {
     }
 
     const shuffledPlayers = shuffleArray([...players]);
-    window.tournamentGroups = []; // Global storage for Round 1 groups
+    window.tournamentGroups = [];
     for (let i = 0; i < NUM_GROUPS; i++) {
         const group = shuffledPlayers.slice(i * PLAYERS_PER_GROUP, (i + 1) * PLAYERS_PER_GROUP);
         window.tournamentGroups.push(group);
 
-        // Initialize scores for all players to 0 (only if they aren't already scored in previous rounds)
         group.forEach(player => {
             if (playerScores[player] === undefined) playerScores[player] = 0;
         });
     }
 
-    renderGroups(); // Call the new rendering function
+    renderGroups();
     showSection(groupsSection);
     createGroupsBtn.disabled = true;
     addPlayerBtn.disabled = true;
     playerNameInput.disabled = true;
     startRound1Btn.disabled = false;
-    playerReplacementSection.style.display = 'block'; // Show replacement option
+    playerReplacementSection.style.display = 'block';
+    saveState();
 });
 
-// New Event Listener for Replace Player Button
+// Event Listener for Replace Player Button
 replacePlayerBtn.addEventListener('click', () => {
     const playerToReplace = playerToReplaceInput.value.trim();
     const newPlayerName = newPlayerNameInput.value.trim();
 
-    // Clear previous messages
     replacementStatusMessage.textContent = '';
     replacementStatusMessage.classList.remove('success', 'error');
 
@@ -218,7 +357,6 @@ replacePlayerBtn.addEventListener('click', () => {
         return;
     }
 
-    // Check if new player already exists in the overall players list (excluding the one being replaced)
     if (players.includes(newPlayerName) && newPlayerName !== playerToReplace) {
         replacementStatusMessage.textContent = `"${newPlayerName}" already exists in the player list. Please use a unique name.`;
         replacementStatusMessage.classList.add('error');
@@ -228,36 +366,30 @@ replacePlayerBtn.addEventListener('click', () => {
     let replaced = false;
     let groupIndexFound = -1;
 
-    // Find the player in window.tournamentGroups and replace them
     for (let i = 0; i < window.tournamentGroups.length; i++) {
         const group = window.tournamentGroups[i];
         const index = group.indexOf(playerToReplace);
         if (index !== -1) {
-            group[index] = newPlayerName; // Replace in the group
+            group[index] = newPlayerName;
             groupIndexFound = i;
             replaced = true;
-            break; // Player found and replaced, exit loop
+            break;
         }
     }
 
     if (replaced) {
-        // Update the main 'players' array
         const globalPlayerIndex = players.indexOf(playerToReplace);
         if (globalPlayerIndex !== -1) {
             players[globalPlayerIndex] = newPlayerName;
         } else {
-             // This case should ideally not happen if playerToReplace was found in a group,
-             // but it's a safeguard if player data gets out of sync.
              replacementStatusMessage.textContent = `Warning: "${playerToReplace}" was found in a group but not in the global player list.`;
              replacementStatusMessage.classList.add('error');
         }
 
-
-        // Update playerScores: remove old player's score, add new player with 0 score
         delete playerScores[playerToReplace];
-        playerScores[newPlayerName] = 0; // New player starts with 0 score for Round 1
+        playerScores[newPlayerName] = 0;
 
-        renderGroups(); // Re-render the updated groups display
+        renderGroups();
         playerToReplaceInput.value = '';
         newPlayerNameInput.value = '';
         replacementStatusMessage.textContent = `"${playerToReplace}" successfully replaced by "${newPlayerName}" in Group ${groupIndexFound + 1}.`;
@@ -266,12 +398,13 @@ replacePlayerBtn.addEventListener('click', () => {
         replacementStatusMessage.textContent = `"${playerToReplace}" not found in any group. Please check the spelling.`;
         replacementStatusMessage.classList.add('error');
     }
+    saveState();
 });
 
 
 // --- Step 3: Round 1 (Z1) - Intra-Group Fights ---
 function generateRound1Fights() {
-    round1FightsContainer.innerHTML = ''; // Clear previous fights
+    round1FightsContainer.innerHTML = '';
     window.tournamentGroups.forEach((group, groupIndex) => {
         const groupDiv = document.createElement('div');
         groupDiv.classList.add('group-fights');
@@ -281,7 +414,6 @@ function generateRound1Fights() {
             for (let j = i + 1; j < group.length; j++) {
                 const player1 = group[i];
                 const player2 = group[j];
-                // Ensure unique ID even if player names contain spaces or special chars
                 const fightId = `fight-Z1-G${groupIndex + 1}-${player1.replace(/[^a-zA-Z0-9]/g, '')}-${player2.replace(/[^a-zA-Z0-9]/g, '')}`;
 
                 const fightElement = document.createElement('div');
@@ -307,9 +439,6 @@ function generateRound1Fights() {
 
 function recordRound1Scores() {
     let allFightsRecorded = true;
-    // Reset all player scores before recalculating for Round 1
-    // Important: only reset scores for players currently in the tournament,
-    // not old players who might have been replaced.
     Object.keys(playerScores).forEach(player => playerScores[player] = 0);
 
 
@@ -321,9 +450,8 @@ function recordRound1Scores() {
         if (winnerName === "") {
             allFightsRecorded = false;
         } else {
-            // Ensure the winnerName exists in playerScores (it should, as new players are initialized)
             if (playerScores[winnerName] !== undefined) {
-                playerScores[winnerName] += 1; // Assign 1 point to the winner
+                playerScores[winnerName] += 1;
             }
         }
     });
@@ -333,12 +461,14 @@ function recordRound1Scores() {
 startRound1Btn.addEventListener('click', () => {
     showSection(round1Section);
     generateRound1Fights();
+    saveState();
 });
 
 finishRound1Btn.addEventListener('click', () => {
     if (recordRound1Scores()) {
         showSection(round1ScoresSection);
         displayRound1Scores();
+        saveState();
     } else {
         alert("Please select a winner for all fights before finishing Round 1.");
     }
@@ -346,7 +476,7 @@ finishRound1Btn.addEventListener('click', () => {
 
 // --- Step 4: Display Round 1 Scores ---
 function displayRound1Scores() {
-    round1ScoresContainer.innerHTML = ''; // Clear previous scores
+    round1ScoresContainer.innerHTML = '';
 
     const playersWithScores = Object.keys(playerScores).map(playerName => ({
         name: playerName,
@@ -361,7 +491,7 @@ function displayRound1Scores() {
 
         const groupPlayersScores = playersWithScores
             .filter(p => group.includes(p.name))
-            .sort((a, b) => b.score - a.score); // Sort by score descending
+            .sort((a, b) => b.score - a.score);
 
         groupPlayersScores.forEach(player => {
             const li = document.createElement('li');
@@ -375,7 +505,7 @@ function displayRound1Scores() {
 
 // --- Step 5: Select Top 2 Players for Round 2 ---
 selectTopPlayersBtn.addEventListener('click', () => {
-    advancedPlayers = []; // Reset for new selection
+    advancedPlayers = [];
     advancedPlayersList.innerHTML = '';
 
     const playersWithScores = Object.keys(playerScores).map(playerName => ({
@@ -386,9 +516,8 @@ selectTopPlayersBtn.addEventListener('click', () => {
     window.tournamentGroups.forEach((group) => {
         const groupPlayersScores = playersWithScores
             .filter(p => group.includes(p.name))
-            .sort((a, b) => b.score - a.score); // Sort by score descending
+            .sort((a, b) => b.score - a.score);
 
-        // Select top 2 players from each group
         const top2 = groupPlayersScores.slice(0, 2);
         top2.forEach(player => {
             advancedPlayers.push(player.name);
@@ -400,11 +529,11 @@ selectTopPlayersBtn.addEventListener('click', () => {
 
     if (advancedPlayers.length !== 16) {
         alert(`Warning: Expected 16 players for Round 2, but found ${advancedPlayers.length}. This might be due to ties. Proceeding with ${advancedPlayers.length} players.`);
-        // You might want to implement a more robust tie-breaking rule here if strict 16 players are required.
     }
 
     showSection(round2PrepSection);
     startRound2Btn.disabled = false;
+    saveState();
 });
 
 // --- Step 6 & 7: Round 2 (Z2) - Group Fights ---
@@ -415,7 +544,7 @@ function generateRound2Fights() {
 
     const r2Groups = [];
     const R2_PLAYERS_PER_GROUP = 4;
-    const R2_NUM_GROUPS = 16 / R2_PLAYERS_PER_GROUP; // 4 groups for Z2
+    const R2_NUM_GROUPS = 16 / R2_PLAYERS_PER_GROUP;
 
     for (let i = 0; i < R2_NUM_GROUPS; i++) {
         const group = shuffledAdvancedPlayers.slice(i * R2_PLAYERS_PER_GROUP, (i + 1) * R2_PLAYERS_PER_GROUP);
@@ -433,10 +562,8 @@ function generateRound2Fights() {
         round2GroupsContainer.appendChild(groupCard);
     }
 
-    // Store R2 groups globally
     window.round2Groups = r2Groups;
 
-    // Setup 2 group fights: G1 vs G4, G2 vs G3
     const fights = [
         { id: 'R2-Fight1', team1: r2Groups[0], team2: r2Groups[3], team1Name: 'R2 Group 1', team2Name: 'R2 Group 4' },
         { id: 'R2-Fight2', team1: r2Groups[1], team2: r2Groups[2], team1Name: 'R2 Group 2', team2Name: 'R2 Group 3' }
@@ -474,10 +601,11 @@ function generateRound2Fights() {
 startRound2Btn.addEventListener('click', () => {
     showSection(round2Section);
     generateRound2Fights();
+    saveState();
 });
 
 finishRound2Btn.addEventListener('click', () => {
-    round2Winners = []; // Reset winners
+    round2Winners = [];
 
     const fight1WinnerSelect = document.getElementById('R2-Fight1-winner');
     const fight2WinnerSelect = document.getElementById('R2-Fight2-winner');
@@ -487,16 +615,15 @@ finishRound2Btn.addEventListener('click', () => {
         return;
     }
 
-    // Determine winning groups and add their players to round2Winners
     if (fight1WinnerSelect.value === 'R2 Group 1') {
         round2Winners.push(...window.round2Groups[0]);
-    } else { // R2 Group 4
+    } else {
         round2Winners.push(...window.round2Groups[3]);
     }
 
     if (fight2WinnerSelect.value === 'R2 Group 2') {
         round2Winners.push(...window.round2Groups[1]);
-    } else { // R2 Group 3
+    } else {
         round2Winners.push(...window.round2Groups[2]);
     }
 
@@ -507,6 +634,7 @@ finishRound2Btn.addEventListener('click', () => {
 
     showSection(quarterFinalSection);
     generateQuarterFinalFights();
+    saveState();
 });
 
 // --- Step 8: Quarter-Final (Z3) - 2v2 Fights ---
@@ -514,7 +642,6 @@ function generateQuarterFinalFights() {
     quarterFinalFightsContainer.innerHTML = '';
     const shuffledRound2Winners = shuffleArray([...round2Winners]);
 
-    // Setup 2 2v2 fights
     const qfFights = [
         { id: 'QF-Fight1', team1: [shuffledRound2Winners[0], shuffledRound2Winners[1]], team2: [shuffledRound2Winners[2], shuffledRound2Winners[3]] },
         { id: 'QF-Fight2', team1: [shuffledRound2Winners[4], shuffledRound2Winners[5]], team2: [shuffledRound2Winners[6], shuffledRound2Winners[7]] }
@@ -549,7 +676,7 @@ function generateQuarterFinalFights() {
 }
 
 finishQuarterFinalBtn.addEventListener('click', () => {
-    quarterFinalWinners = []; // Reset winners
+    quarterFinalWinners = [];
 
     const fight1WinnerSelect = document.getElementById('QF-Fight1-winner');
     const fight2WinnerSelect = document.getElementById('QF-Fight2-winner');
@@ -569,6 +696,7 @@ finishQuarterFinalBtn.addEventListener('click', () => {
 
     showSection(semiFinalSection);
     generateSemiFinalFights();
+    saveState();
 });
 
 // --- Semi-Final (Z4) - 1v1 Fights ---
@@ -576,7 +704,6 @@ function generateSemiFinalFights() {
     semiFinalFightsContainer.innerHTML = '';
     const shuffledQuarterFinalWinners = shuffleArray([...quarterFinalWinners]);
 
-    // Setup 2 1v1 fights
     const sfFights = [
         { id: 'SF-Fight1', player1: shuffledQuarterFinalWinners[0], player2: shuffledQuarterFinalWinners[1] },
         { id: 'SF-Fight2', player1: shuffledQuarterFinalWinners[2], player2: shuffledQuarterFinalWinners[3] }
@@ -607,8 +734,8 @@ function generateSemiFinalFights() {
 }
 
 finishSemiFinalBtn.addEventListener('click', () => {
-    semiFinalWinners = []; // Reset winners
-    semiFinalLosers = []; // Reset losers
+    semiFinalWinners = [];
+    semiFinalLosers = [];
 
     const fight1WinnerSelect = document.getElementById('SF-Fight1-winner');
     const fight2WinnerSelect = document.getElementById('SF-Fight2-winner');
@@ -619,7 +746,6 @@ finishSemiFinalBtn.addEventListener('click', () => {
     }
 
     const sf1Winner = fight1WinnerSelect.value;
-    // Get the player who is NOT the winner from the options
     const sf1Loser = Array.from(fight1WinnerSelect.options).find(option => option.value !== "" && option.value !== sf1Winner)?.value;
 
     const sf2Winner = fight2WinnerSelect.value;
@@ -628,7 +754,6 @@ finishSemiFinalBtn.addEventListener('click', () => {
     semiFinalWinners.push(sf1Winner, sf2Winner);
     semiFinalLosers.push(sf1Loser, sf2Loser);
 
-    // Remove finalists from the losers list (just in case due to complex tie-breaking or manual error)
     semiFinalLosers = semiFinalLosers.filter(loser => !semiFinalWinners.includes(loser));
 
     if (semiFinalWinners.length !== 2 || semiFinalLosers.length !== 2) {
@@ -638,12 +763,13 @@ finishSemiFinalBtn.addEventListener('click', () => {
 
     showSection(finalSection);
     generateFinalFight();
+    saveState();
 });
 
 // --- Final Round & Awards ---
 function generateFinalFight() {
     finalFightContainer.innerHTML = '';
-    const finalPlayers = shuffleArray([...semiFinalWinners]); // Shuffle just in case, though it's only two
+    const finalPlayers = shuffleArray([...semiFinalWinners]);
 
     const fightElement = document.createElement('div');
     fightElement.classList.add('knockout-fight-card');
@@ -681,17 +807,14 @@ showAwardsBtn.addEventListener('click', () => {
     awardsContainer.innerHTML = `<h3>Tournament Prizes</h3><ul></ul>`;
     const ul = awardsContainer.querySelector('ul');
 
-    // Winner
     let liWinner = document.createElement('li');
     liWinner.innerHTML = `<strong>${winner} (Champion):</strong> 100M Food, 50M Iron, Best blessing from King`;
     ul.appendChild(liWinner);
 
-    // Other Finalist
     let liFinalist = document.createElement('li');
     liFinalist.innerHTML = `<strong>${finalist} (Runner-up):</strong> 50M Food, 25M Iron, Second best King blessing`;
     ul.appendChild(liFinalist);
 
-    // Semi-Final Losers
     semiFinalLosers.forEach(loser => {
         let liLoser = document.createElement('li');
         liLoser.innerHTML = `<strong>${loser} (Semi-Finalist):</strong> 25M Food, 10M Iron, 3rd best King blessing`;
@@ -699,8 +822,18 @@ showAwardsBtn.addEventListener('click', () => {
     });
 
     awardsContainer.style.display = 'block';
+    saveState();
+});
+
+// --- New: Reset Progress Logic ---
+resetProgressBtn.addEventListener('click', () => {
+    if (confirm("Are you sure you want to reset all tournament progress? This cannot be undone.")) {
+        localStorage.removeItem('tournamentState'); // Clear the saved state from localStorage
+        window.location.reload(); // Reload the page to start fresh
+    }
 });
 
 
 // --- Initial Setup ---
-updatePlayerCount(); // Set initial player count to 0
+loadState();
+updatePlayerCount();
