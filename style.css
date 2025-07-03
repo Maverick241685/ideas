@@ -419,6 +419,25 @@ button:disabled {
     margin-bottom: 8px;
     line-height: 1.4;
 }
+/* ... (existing CSS) ... */
+
+.replacement-message {
+    margin-top: 10px;
+    font-size: 0.9em;
+    padding: 8px;
+    border-radius: 4px;
+    text-align: center;
+}
+.replacement-message.success {
+    background-color: #e6ffe6;
+    color: #008000;
+    border: 1px solid #008000;
+}
+.replacement-message.error {
+    background-color: #ffe6e6;
+    color: #cc0000;
+    border: 1px solid #cc0000;
+}
 
 .tournament-summary p strong {
     color: #0056b3;
