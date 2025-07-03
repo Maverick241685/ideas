@@ -38,7 +38,7 @@ const startRound2Btn = document.getElementById('startRound2Btn');
 const round2Section = document.getElementById('round2-section');
 const round2GroupsContainer = document.getElementById('round2GroupsContainer');
 const round2FightsContainer = document.getElementById('round2FightsContainer');
-const finishRound2Btn = document = document.getElementById('finishRound2Btn');
+const finishRound2Btn = document.getElementById('finishRound2Btn');
 
 const quarterFinalSection = document.getElementById('quarter-final-section');
 const quarterFinalFightsContainer = document.getElementById('quarterFinalFightsContainer');
@@ -103,9 +103,11 @@ function showSection(sectionToShow) {
     if (sectionToShow === addPlayersSection) {
         addPlayerBtn.disabled = false;
         playerNameInput.disabled = false;
+        playerReplacementSection.style.display = 'none'; // Hide replacement section
     } else {
         addPlayerBtn.disabled = true;
         playerNameInput.disabled = true;
+        // Replacement section is shown/hidden based on specific stages, not here globally
     }
 
 
@@ -188,28 +190,28 @@ function loadState() {
             // Re-render appropriate sections based on the stage of the tournament
             if (state.currentSectionId) {
                 const currentSectionElement = document.getElementById(state.currentSectionId);
-                showSection(currentSectionElement); // Show the last active section
+                showSection(currentSectionElement); // Show the last active section and handle input disabling
 
-                // Re-enable/re-render elements based on the loaded section
+                // Specific re-enabling/re-rendering based on the loaded section, after showSection
                 if (state.currentSectionId === 'groups-section') {
                     if (window.tournamentGroups.length > 0) {
                         renderGroups();
-                        createGroupsBtn.disabled = true; // Disable initial create button
+                        createGroupsBtn.disabled = true;
                         startRound1Btn.disabled = false;
-                        playerReplacementSection.style.display = 'block'; // Show replacement option
+                        playerReplacementSection.style.display = 'block';
                     }
                 } else if (state.currentSectionId === 'round1-section') {
-                    renderGroups(); // Groups must be rendered before fights
-                    generateRound1Fights(true); // Pass true to indicate a reload for real-time scores
+                    renderGroups();
+                    generateRound1Fights(true);
                     finishRound1Btn.disabled = false;
-                    playerReplacementSection.style.display = 'none'; // Hide replacement once round starts
+                    playerReplacementSection.style.display = 'none';
                 } else if (state.currentSectionId === 'round1-scores-section') {
                     renderGroups();
                     displayRound1Scores();
                     selectTopPlayersBtn.disabled = false;
                     playerReplacementSection.style.display = 'none';
                 } else if (state.currentSectionId === 'round2-prep-section') {
-                    advancedPlayersList.innerHTML = ''; // Clear before re-listing
+                    advancedPlayersList.innerHTML = '';
                     advancedPlayers.forEach(player => {
                         const li = document.createElement('li');
                         li.textContent = player;
@@ -235,7 +237,7 @@ function loadState() {
                     playerReplacementSection.style.display = 'none';
                 }
             } else {
-                // If no specific section was saved, default to add-players-section and ensure inputs are enabled
+                // If no specific section was saved or is invalid, default to add-players-section
                 showSection(addPlayersSection);
             }
 
@@ -324,11 +326,10 @@ createGroupsBtn.addEventListener('click', () => {
     }
 
     renderGroups();
-    showSection(groupsSection);
+    showSection(groupsSection); // This will disable the player input fields
     createGroupsBtn.disabled = true;
-    // The showSection function now handles disabling addPlayerBtn and playerNameInput
     startRound1Btn.disabled = false;
-    playerReplacementSection.style.display = 'block';
+    playerReplacementSection.style.display = 'block'; // Show replacement option here
     saveState();
 });
 
@@ -442,58 +443,4 @@ function generateRound1Fights(isReload = false) {
                 const fightId = `fight-Z1-G${groupIndex + 1}-${sanitizedPlayer1}-${sanitizedPlayer2}`;
 
                 const fightElement = document.createElement('div');
-                fightElement.classList.add('fight-card');
-                fightElement.innerHTML = `
-                    <p>${player1} vs ${player2}</p>
-                    <div class="score-input">
-                        <label>Winner:</label>
-                        <select id="${fightId}-winner">
-                            <option value="">Select Winner</option>
-                            <option value="${player1}">${player1}</option>
-                            <option value="${player2}">${player2}</option>
-                        </select>
-                    </div>
-                `;
-                groupDiv.appendChild(fightElement);
-
-                // Add event listener for real-time updates
-                const winnerSelect = fightElement.querySelector(`#${fightId}-winner`);
-                winnerSelect.addEventListener('change', (event) => {
-                    // Update scores locally (reset for selected player, then re-calculate)
-                    recordRound1Scores(); // Re-calculate all scores after a change
-                    updateScoreTable(); // Update the displayed table
-                    saveState(); // Save state after each change
-                });
-
-                // Restore selected value if reloading
-                if (isReload && currentSelections[`${fightId}-winner`] !== undefined) {
-                    winnerSelect.value = currentSelections[`${fightId}-winner`];
-                }
-            }
-        }
-        round1FightsContainer.appendChild(groupDiv);
-    });
-
-    // Initial update of score table
-    recordRound1Scores(); // Make sure playerScores are correct first
-    updateScoreTable(); // Display the scores table
-    finishRound1Btn.disabled = false;
-}
-
-
-// --- New: Update Real-time Score Table ---
-function updateScoreTable() {
-    const realTimeScoresDiv = document.getElementById('realTimeRound1Scores');
-    if (!realTimeScoresDiv) return; // Exit if the container doesn't exist
-
-    realTimeScoresDiv.innerHTML = '<h2>Current Round 1 Scores</h2>';
-    const scoreTable = document.createElement('div');
-    scoreTable.classList.add('scores-table-grid'); // Use a grid for layout
-
-    window.tournamentGroups.forEach((group, groupIndex) => {
-        const groupScoresCard = document.createElement('div');
-        groupScoresCard.classList.add('group-scores-card'); // Reusing existing card style
-        groupScoresCard.innerHTML = `<h3>Group ${groupIndex + 1}</h3><ul></ul>`;
-        const ul = groupScoresCard.querySelector('ul');
-
-        const groupPlayersScores = group.map(playerName =>
+                fightElement.
