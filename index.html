@@ -76,6 +76,16 @@
             <h2>Step 2: Create Groups (Round Z1)</h2>
             <div id="groupsContainer" class="groups-grid">
                 </div>
+
+            <div id="player-replacement-section" class="card" style="display: none; margin-top: 20px;">
+                <h3>Replace a Player in a Group</h3>
+                <div class="input-group">
+                    <input type="text" id="playerToReplaceInput" placeholder="Player to replace (e.g., Player A)">
+                    <input type="text" id="newPlayerNameInput" placeholder="New player name (e.g., Player X)">
+                    <button id="replacePlayerBtn">Replace Player</button>
+                </div>
+                <p class="replacement-message" id="replacementStatusMessage"></p>
+            </div>
             <button id="startRound1Btn" class="primary-btn" disabled>Start Round 1 (Z1)</button>
         </section>
 
