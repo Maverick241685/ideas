@@ -52,6 +52,13 @@ const finalFightContainer = document.getElementById('finalFightContainer');
 const showAwardsBtn = document.getElementById('showAwardsBtn');
 const awardsContainer = document.getElementById('awardsContainer');
 
+// New DOM elements for replacement
+const playerReplacementSection = document.getElementById('player-replacement-section');
+const playerToReplaceInput = document.getElementById('playerToReplaceInput');
+const newPlayerNameInput = document.getElementById('newPlayerNameInput');
+const replacePlayerBtn = document.getElementById('replacePlayerBtn');
+const replacementStatusMessage = document.getElementById('replacementStatusMessage');
+
 
 // --- Helper Functions ---
 
@@ -90,6 +97,26 @@ function showSection(sectionToShow) {
         sectionToShow.style.display = 'block';
     }
 }
+
+// Function to render groups (extracted for reusability)
+function renderGroups() {
+    groupsContainer.innerHTML = ''; // Clear previous groups
+    if (!window.tournamentGroups) return; // Ensure groups exist before rendering
+
+    window.tournamentGroups.forEach((group, groupIndex) => {
+        const groupCard = document.createElement('div');
+        groupCard.classList.add('group-card');
+        groupCard.innerHTML = `<h3>Group ${groupIndex + 1}</h3><ul></ul>`;
+        const ul = groupCard.querySelector('ul');
+        group.forEach(player => {
+            const li = document.createElement('li');
+            li.textContent = player;
+            ul.appendChild(li);
+        });
+        groupsContainer.appendChild(groupCard);
+    });
+}
+
 
 // --- Step 1: Add Players ---
 addPlayerBtn.addEventListener('click', () => {
@@ -132,7 +159,6 @@ addPlayerBtn.addEventListener('click', () => {
         message += `Maximum of ${MAX_PLAYERS} players reached. No more players can be added.`;
     }
     if (message) {
-        // Use an alert or display a message on the page for user feedback
         alert(message.trim());
     }
 });
@@ -150,37 +176,98 @@ createGroupsBtn.addEventListener('click', () => {
         return;
     }
 
-    groupsContainer.innerHTML = ''; // Clear previous groups
-    const shuffledPlayers = shuffleArray([...players]); // Shuffle a copy of the players array
-
+    const shuffledPlayers = shuffleArray([...players]);
     window.tournamentGroups = []; // Global storage for Round 1 groups
     for (let i = 0; i < NUM_GROUPS; i++) {
         const group = shuffledPlayers.slice(i * PLAYERS_PER_GROUP, (i + 1) * PLAYERS_PER_GROUP);
         window.tournamentGroups.push(group);
 
-        const groupCard = document.createElement('div');
-        groupCard.classList.add('group-card');
-        groupCard.innerHTML = `<h3>Group ${i + 1}</h3><ul></ul>`;
-        const ul = groupCard.querySelector('ul');
-        group.forEach(player => {
-            const li = document.createElement('li');
-            li.textContent = player;
-            ul.appendChild(li);
-        });
-        groupsContainer.appendChild(groupCard);
-
-        // Initialize scores for all players to 0
+        // Initialize scores for all players to 0 (only if they aren't already scored in previous rounds)
         group.forEach(player => {
             if (playerScores[player] === undefined) playerScores[player] = 0;
         });
     }
 
+    renderGroups(); // Call the new rendering function
     showSection(groupsSection);
     createGroupsBtn.disabled = true;
     addPlayerBtn.disabled = true;
     playerNameInput.disabled = true;
     startRound1Btn.disabled = false;
+    playerReplacementSection.style.display = 'block'; // Show replacement option
 });
+
+// New Event Listener for Replace Player Button
+replacePlayerBtn.addEventListener('click', () => {
+    const playerToReplace = playerToReplaceInput.value.trim();
+    const newPlayerName = newPlayerNameInput.value.trim();
+
+    // Clear previous messages
+    replacementStatusMessage.textContent = '';
+    replacementStatusMessage.classList.remove('success', 'error');
+
+    if (!playerToReplace || !newPlayerName) {
+        replacementStatusMessage.textContent = 'Please enter both player names.';
+        replacementStatusMessage.classList.add('error');
+        return;
+    }
+
+    if (playerToReplace === newPlayerName) {
+        replacementStatusMessage.textContent = 'New player name cannot be the same as the player to replace.';
+        replacementStatusMessage.classList.add('error');
+        return;
+    }
+
+    // Check if new player already exists in the overall players list (excluding the one being replaced)
+    if (players.includes(newPlayerName) && newPlayerName !== playerToReplace) {
+        replacementStatusMessage.textContent = `"${newPlayerName}" already exists in the player list. Please use a unique name.`;
+        replacementStatusMessage.classList.add('error');
+        return;
+    }
+
+    let replaced = false;
+    let groupIndexFound = -1;
+
+    // Find the player in window.tournamentGroups and replace them
+    for (let i = 0; i < window.tournamentGroups.length; i++) {
+        const group = window.tournamentGroups[i];
+        const index = group.indexOf(playerToReplace);
+        if (index !== -1) {
+            group[index] = newPlayerName; // Replace in the group
+            groupIndexFound = i;
+            replaced = true;
+            break; // Player found and replaced, exit loop
+        }
+    }
+
+    if (replaced) {
+        // Update the main 'players' array
+        const globalPlayerIndex = players.indexOf(playerToReplace);
+        if (globalPlayerIndex !== -1) {
+            players[globalPlayerIndex] = newPlayerName;
+        } else {
+             // This case should ideally not happen if playerToReplace was found in a group,
+             // but it's a safeguard if player data gets out of sync.
+             replacementStatusMessage.textContent = `Warning: "${playerToReplace}" was found in a group but not in the global player list.`;
+             replacementStatusMessage.classList.add('error');
+        }
+
+
+        // Update playerScores: remove old player's score, add new player with 0 score
+        delete playerScores[playerToReplace];
+        playerScores[newPlayerName] = 0; // New player starts with 0 score for Round 1
+
+        renderGroups(); // Re-render the updated groups display
+        playerToReplaceInput.value = '';
+        newPlayerNameInput.value = '';
+        replacementStatusMessage.textContent = `"${playerToReplace}" successfully replaced by "${newPlayerName}" in Group ${groupIndexFound + 1}.`;
+        replacementStatusMessage.classList.add('success');
+    } else {
+        replacementStatusMessage.textContent = `"${playerToReplace}" not found in any group. Please check the spelling.`;
+        replacementStatusMessage.classList.add('error');
+    }
+});
+
 
 // --- Step 3: Round 1 (Z1) - Intra-Group Fights ---
 function generateRound1Fights() {
@@ -194,7 +281,8 @@ function generateRound1Fights() {
             for (let j = i + 1; j < group.length; j++) {
                 const player1 = group[i];
                 const player2 = group[j];
-                const fightId = `fight-Z1-G${groupIndex + 1}-${player1.replace(/\s/g, '')}-${player2.replace(/\s/g, '')}`; // Unique ID
+                // Ensure unique ID even if player names contain spaces or special chars
+                const fightId = `fight-Z1-G${groupIndex + 1}-${player1.replace(/[^a-zA-Z0-9]/g, '')}-${player2.replace(/[^a-zA-Z0-9]/g, '')}`;
 
                 const fightElement = document.createElement('div');
                 fightElement.classList.add('fight-card');
@@ -220,7 +308,10 @@ function generateRound1Fights() {
 function recordRound1Scores() {
     let allFightsRecorded = true;
     // Reset all player scores before recalculating for Round 1
-    players.forEach(player => playerScores[player] = 0);
+    // Important: only reset scores for players currently in the tournament,
+    // not old players who might have been replaced.
+    Object.keys(playerScores).forEach(player => playerScores[player] = 0);
+
 
     const fightCards = round1FightsContainer.querySelectorAll('.fight-card');
     fightCards.forEach(card => {
@@ -230,7 +321,10 @@ function recordRound1Scores() {
         if (winnerName === "") {
             allFightsRecorded = false;
         } else {
-            playerScores[winnerName] += 1; // Assign 1 point to the winner
+            // Ensure the winnerName exists in playerScores (it should, as new players are initialized)
+            if (playerScores[winnerName] !== undefined) {
+                playerScores[winnerName] += 1; // Assign 1 point to the winner
+            }
         }
     });
     return allFightsRecorded;
