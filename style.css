@@ -442,3 +442,22 @@ button:disabled {
 .tournament-summary p strong {
     color: #0056b3;
 }
+/* ... (existing CSS) ... */
+
+.reset-btn {
+    display: block;
+    width: fit-content;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: #dc3545; /* Red color for caution */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.reset-btn:hover {
+    background-color: #c82333; /* Darker red on hover */
+}
