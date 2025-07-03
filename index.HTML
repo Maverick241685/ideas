@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tournament Manager</h1>
+
+        <div class="tournament-summary card">
+            <h2>Tournament Overview</h2>
+            <p>
+                This tournament features <strong>40 players</strong> competing through multiple intense rounds to crown the ultimate champion!
+            </p>
+            <h3>English Summary:</h3>
+            <ul>
+                <li><strong>Step 1: Player Entry</strong> - Add up to 40 players.</li>
+                <li><strong>Step 2: Group Creation (Round Z1)</strong> - Players are randomly divided into 8 groups of 5.</li>
+                <li><strong>Step 3: Round 1 (Z1) - Intra-Group Fights</strong> - Each player fights everyone else within their group. Points are awarded for wins.</li>
+                <li><strong>Step 4: Score Display</strong> - View scores from Round 1 for each group.</li>
+                <li><strong>Step 5: Round 2 Preparation</strong> - Top 2 players from each of the 8 groups (16 players total) advance.</li>
+                <li><strong>Step 6 & 7: Round 2 (Z2) - Group vs. Group Fights</strong> - The 16 players are randomly split into 4 new groups of 4. Then, Group 1 fights Group 4, and Group 2 fights Group 3. The 8 players from the 2 winning groups proceed.</li>
+                <li><strong>Step 8: Quarter-Final (Z3) - 2v2 Fights</strong> - The 8 players are randomly paired into two 2v2 battles. The 4 winners advance.</li>
+                <li><strong>Semi-Final (Z4) - 1v1 Fights</strong> - The 4 winners compete in two 1v1 matches. The 2 winners proceed to the Final.</li>
+                <li><strong>Final Round & Awards</strong> - The two finalists battle for the championship. Prizes are awarded to the Champion, Runner-up, and the two Semi-Final losers.</li>
+            </ul>
+
+            <h3>Resumen en Español:</h3>
+            <ul>
+                <li><strong>Paso 1: Inscripción de Jugadores</strong> - Añade hasta 40 jugadores.</li>
+                <li><strong>Paso 2: Creación de Grupos (Ronda Z1)</strong> - Los jugadores se dividen aleatoriamente en 8 grupos de 5.</li>
+                <li><strong>Paso 3: Ronda 1 (Z1) - Peleas Intra-Grupo</strong> - Cada jugador lucha contra todos los demás dentro de su grupo. Se otorgan puntos por victorias.</li>
+                <li><strong>Paso 4: Mostrar Puntuaciones</strong> - Visualiza las puntuaciones de la Ronda 1 para cada grupo.</li>
+                <li><strong>Paso 5: Preparación para la Ronda 2</strong> - Los 2 mejores jugadores de cada uno de los 8 grupos (16 jugadores en total) avanzan.</li>
+                <li><strong>Pasos 6 y 7: Ronda 2 (Z2) - Peleas de Grupo vs. Grupo</strong> - Los 16 jugadores se dividen aleatoriamente en 4 nuevos grupos de 4. Luego, el Grupo 1 lucha contra el Grupo 4, y el Grupo 2 lucha contra el Grupo 3. Los 8 jugadores de los 2 grupos ganadores avanzan.</li>
+                <li><strong>Paso 8: Cuartos de Final (Z3) - Peleas 2v2</strong> - Los 8 jugadores se emparejan aleatoriamente en dos batallas 2v2. Los 4 ganadores avanzan.</li>
+                <li><strong>Semifinal (Z4) - Peleas 1v1</strong> - Los 4 ganadores compiten en dos partidos 1v1. Los 2 ganadores avanzan a la Final.</li>
+                <li><strong>Ronda Final y Premios</strong> - Los dos finalistas luchan por el campeonato. Se otorgan premios al Campeón, al Subcampeón y a los dos perdedores de las Semifinales.</li>
+            </ul>
+
+            <hr> <h3>Prize Summary (English):</h3>
+            <ul>
+                <li><strong>Champion:</strong> 100M Food, 50M Iron, Best blessing from King</li>
+                <li><strong>Runner-up:</strong> 50M Food, 25M Iron, Second best King blessing</li>
+                <li><strong>Semi-Finalists (2 players):</strong> 25M Food, 10M Iron, 3rd best King blessing</li>
+            </ul>
+
+            <h3>Resumen de Premios (Español):</h3>
+            <ul>
+                <li><strong>Campeón:</strong> 100M Comida, 50M Hierro, La mejor bendición del Rey</li>
+                <li><strong>Subcampeón:</strong> 50M Comida, 25M Hierro, La segunda mejor bendición del Rey</li>
+                <li><strong>Semifinalistas (2 jugadores):</strong> 25M Comida, 10M Hierro, La tercera mejor bendición del Rey</li>
+            </ul>
+        </div>
+        ---
+        <section id="add-players-section" class="card">
+            <h2>Step 1: Add Players</h2>
+            <div class="input-group">
+                <input type="text" id="playerNameInput" placeholder="Enter player name(s) separated by commas">
+                <button id="addPlayerBtn">Add Player(s)</button>
+            </div>
+            <div class="player-list-container">
+                <h3>Current Players (<span id="playerCount">0</span>/40)</h3>
+                <ul id="playerList">
+                    </ul>
+            </div>
+            <button id="createGroupsBtn" class="primary-btn" disabled>Create Groups (Need 40 Players)</button>
+        </section>
+
+        <section id="groups-section" class="card" style="display: none;">
+            <h2>Step 2: Create Groups (Round Z1)</h2>
+            <div id="groupsContainer" class="groups-grid">
+                </div>
+            <button id="startRound1Btn" class="primary-btn" disabled>Start Round 1 (Z1)</button>
+        </section>
+
+        <section id="round1-section" class="card" style="display: none;">
+            <h2>Step 3: Round 1 (Z1) - Intra-Group Fights</h2>
+            <p>Each player in a group fights every other player in their group. Record scores below.</p>
+            <div id="round1FightsContainer">
+                </div>
+            <button id="finishRound1Btn" class="primary-btn" disabled>Finish Round 1 & Show Scores</button>
+        </section>
+
+        <section id="round1-scores-section" class="card" style="display: none;">
+            <h2>Step 4: Round

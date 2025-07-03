@@ -1,0 +1,425 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    width: 100%;
+    max-width: 900px;
+}
+
+h1 {
+    text-align: center;
+    color: #0056b3;
+    margin-bottom: 30px;
+}
+
+h2 {
+    color: #0056b3;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background-color: #fdfdfd;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input[type="text"] {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s;
+    background-color: #007bff;
+    color: white;
+}
+
+button:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.primary-btn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px 20px;
+    font-size: 1.1em;
+}
+
+.player-list-container {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 15px;
+}
+
+#playerList {
+    list-style: decimal;
+    padding-left: 20px;
+    margin: 0;
+}
+
+#playerList li {
+    padding: 5px 0;
+    border-bottom: 1px dotted #eee;
+}
+
+#playerList li:last-child {
+    border-bottom: none;
+}
+
+.groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.group-card {
+    border: 1px solid #b3d9ff;
+    border-radius: 6px;
+    padding: 15px;
+    background-color: #e6f3ff;
+}
+
+.group-card h3 {
+    margin-top: 0;
+    color: #0056b3;
+    font-size: 1.2em;
+    border-bottom: 1px solid #b3d9ff;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.group-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.group-card ul li {
+    padding: 3px 0;
+}
+
+.group-fights {
+    margin-bottom: 30px;
+    padding: 15px;
+    border: 1px solid #cceeff;
+    border-radius: 6px;
+    background-color: #f0f8ff;
+}
+
+.group-fights h3 {
+    margin-top: 0;
+    color: #0056b3;
+    border-bottom: 1px dashed #b3d9ff;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+}
+
+.fight-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fight-card p {
+    margin: 0;
+    font-weight: bold;
+    color: #555;
+}
+
+.score-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.score-input label {
+    font-weight: normal;
+    color: #666;
+}
+
+.score-input select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.group-scores-card {
+    border: 1px solid #b3d9ff;
+    border-radius: 6px;
+    padding: 15px;
+    background-color: #e6f3ff;
+    margin-bottom: 20px;
+}
+
+.group-scores-card h3 {
+    margin-top: 0;
+    color: #0056b3;
+    border-bottom: 1px solid #b3d9ff;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.group-scores-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.group-scores-card ul li {
+    padding: 5px 0;
+    border-bottom: 1px dotted #dee;
+    display: flex;
+    justify-content: space-between;
+}
+
+.group-scores-card ul li:last-child {
+    border-bottom: none;
+}
+
+/* New styles for advanced players list */
+#advancedPlayersList {
+    list-style: decimal;
+    padding-left: 20px;
+    margin: 15px 0;
+    columns: 2; /* Display in two columns */
+    -webkit-columns: 2;
+    -moz-columns: 2;
+}
+
+#advancedPlayersList li {
+    padding: 3px 0;
+    border-bottom: 1px dotted #eee;
+}
+
+#advancedPlayersList li:last-child {
+    border-bottom: none;
+}
+
+/* Styles for Round 2 group fights */
+.team-fight-card {
+    background-color: #ffffff;
+    border: 1px solid #cceeff;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.team-fight-card h3 {
+    margin-top: 0;
+    color: #0056b3;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.team-fight-teams {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.team-fight-teams .team {
+    flex: 1;
+    text-align: center;
+    background-color: #e6f3ff;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #b3d9ff;
+}
+
+.team-fight-teams .team h4 {
+    margin-top: 0;
+    color: #004080;
+    margin-bottom: 10px;
+}
+
+.team-fight-teams .team ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.team-fight-teams .team ul li {
+    padding: 3px 0;
+}
+
+.team-fight-selector {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.team-fight-selector label {
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.team-fight-selector select {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+/* Styles for 2v2 and 1v1 fights */
+.knockout-fight-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.knockout-fight-card h4 {
+    text-align: center;
+    color: #0056b3;
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.knockout-players {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+.knockout-vs {
+    font-size: 1.2em;
+    color: #666;
+    margin: 0 10px;
+}
+
+.knockout-team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.knockout-team ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+.knockout-team ul li {
+    padding: 2px 0;
+}
+
+/* Awards section styles */
+.awards-card {
+    background-color: #e6ffed; /* Light green background */
+    border-color: #b3e6c2;
+}
+
+.awards-card h3 {
+    color: #007f3f; /* Darker green for heading */
+    border-bottom-color: #b3e6c2;
+}
+
+.awards-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.awards-card ul li {
+    background-color: #f0fff4;
+    border: 1px solid #d0f0d0;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.awards-card ul li strong {
+    color: #005f2f;
+}
+/* ... (existing CSS) ... */
+
+.tournament-summary {
+    margin-bottom: 25px;
+    padding: 20px;
+    background-color: #f8f8f8; /* A slightly different background */
+    border-left: 5px solid #007bff; /* A subtle border on the left */
+}
+
+.tournament-summary h2 {
+    color: #0056b3;
+    border-bottom: 1px dashed #e0e0e0;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+}
+
+.tournament-summary h3 {
+    color: #004080;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.15em;
+}
+
+.tournament-summary ul {
+    list-style: disc; /* Use bullets for readability */
+    padding-left: 25px;
+    margin-bottom: 15px;
+}
+
+.tournament-summary ul li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.tournament-summary p strong {
+    color: #0056b3;
+}
