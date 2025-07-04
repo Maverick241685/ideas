@@ -88,9 +88,29 @@
                     </ul>
             </div>
             <button id="createGroupsBtn" class="primary-btn" disabled>Create Groups (Need 40 Players)</button>
-            <button id="loadTournamentBtn" class="primary-btn">Load Saved Tournament</button>
+            <button id="manageTournamentsBtn" class="primary-btn">Manage Saved Tournaments</button>
         </section>
+<section id="tournament-management-section" class="card" style="display: none;">
+            <h2>Manage Tournaments</h2>
+            <p>Save your current tournament progress or load a previously saved one.</p>
 
+            <div class="save-new-tournament">
+                <h3>Save Current Tournament As:</h3>
+                <div class="player-input">
+                    <input type="text" id="saveTournamentNameInput" placeholder="Enter tournament name (e.g., 'Summer Championship')">
+                    <button id="saveNewTournamentBtn" class="primary-btn">Save New Version</button>
+                </div>
+                <p class="status-message" id="saveStatusMessage"></p>
+            </div>
+
+            <div class="load-existing-tournaments" style="margin-top: 30px;">
+                <h3>Load Existing Tournaments:</h3>
+                <div id="savedTournamentsList">
+                    <p style="text-align: center; color: #aaa;">Loading saved tournaments...</p>
+                </div>
+            </div>
+            <button id="closeTournamentManagerBtn" class="primary-btn" style="margin-top: 20px;">Close Manager</button>
+        </section>
         <section id="groups-section" class="card" style="display: none;">
             <h2>Step 2: Create Groups (Round Z1)</h2>
             <div id="groupsContainer" class="groups-grid">
