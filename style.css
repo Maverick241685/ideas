@@ -516,3 +516,23 @@ button:disabled {
 .group-scores-card li:last-child {
     border-bottom: none;
 }
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7f6; /* Fallback color */
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    color: #333;
+
+    /* New background properties */
+    background-image: url('image_ab5001.jpg'); /* Path to your image */
+    background-size: cover; /* Ensures the image covers the entire background */
+    background-position: center center; /* Centers the image */
+    background-attachment: fixed; /* Keeps the background fixed when scrolling */
+    background-repeat: no-repeat; /* Prevents the image from repeating */
+}
+
+/* ... rest of your style.css ... */
