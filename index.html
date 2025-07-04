@@ -10,15 +10,15 @@
     <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
 
     <script>
-      const firebaseConfig = {
-    apiKey: "AIzaSyAzNQeCCZeQTQKV2E0mpSH7krKD7gtdkfQ",
-    authDomain: "tournament-sage.firebaseapp.com",
-    projectId: "tournament-sage",
-    storageBucket: "tournament-sage.firebasestorage.app",
-    messagingSenderId: "611860863762",
-    appId: "1:611860863762:web:f491d26d0d50349ec031cb",
-    measurementId: "G-SQ5TEBB92Z"
-  };
+        const firebaseConfig = {
+            apiKey: "AIzaSyAzNQeCCZeQTQKV2E0mpSH7krKD7gtdkfQ",
+            authDomain: "tournament-sage.firebaseapp.com",
+            projectId: "tournament-sage",
+            storageBucket: "tournament-sage.firebasestorage.app",
+            messagingSenderId: "611860863762",
+            appId: "1:611860863762:web:f491d26d0d50349ec031cb"
+        };
+
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore(); // Initialize Firestore
@@ -88,8 +88,7 @@
                     </ul>
             </div>
             <button id="createGroupsBtn" class="primary-btn" disabled>Create Groups (Need 40 Players)</button>
-             <button id="saveTournamentBtn" class="primary-btn">Save Tournament</button>
-            <button id="loadTournamentBtn" class="primary-btn">Load Last Tournament</button>
+            <button id="loadTournamentBtn" class="primary-btn">Load Saved Tournament</button>
         </section>
 
         <section id="groups-section" class="card" style="display: none;">
@@ -106,6 +105,7 @@
                 </div>
                 <p class="replacement-message" id="replacementStatusMessage"></p>
             </div>
+            <button id="saveAndProceedStep2Btn" class="primary-btn">Save & Proceed to Round 1</button>
             <button id="startRound1Btn" class="primary-btn" disabled>Start Round 1 (Z1)</button>
         </section>
 
@@ -114,6 +114,7 @@
             <p>Each player in a group fights every other player in their group. Record scores below.</p>
             <div id="round1FightsContainer">
                 </div>
+            <button id="saveAndProceedStep3Btn" class="primary-btn">Save & Proceed to Scores</button>
             <button id="finishRound1Btn" class="primary-btn" disabled>Finish Round 1 & Show Scores</button>
         </section>
 
@@ -121,6 +122,7 @@
             <h2>Step 4: Round 1 Scores</h2>
             <div id="round1ScoresContainer">
                 </div>
+            <button id="saveAndProceedStep4Btn" class="primary-btn">Save & Proceed to Round 2 Prep</button>
             <button id="selectTopPlayersBtn" class="primary-btn" disabled>Select Top 2 from Each Group</button>
         </section>
 
@@ -129,6 +131,7 @@
             <p>These 16 players have advanced:</p>
             <ul id="advancedPlayersList">
                 </ul>
+            <button id="saveAndProceedStep5Btn" class="primary-btn">Save & Proceed to Round 2 Fights</button>
             <button id="startRound2Btn" class="primary-btn" disabled>Start Round 2 (Z2)</button>
         </section>
 
@@ -138,6 +141,7 @@
                 </div>
             <div id="round2FightsContainer">
                 </div>
+            <button id="saveAndProceedStep6Btn" class="primary-btn">Save & Proceed to Quarter-Finals</button>
             <button id="finishRound2Btn" class="primary-btn" disabled>Finish Round 2 & Proceed to Quarter-Finals</button>
         </section>
 
@@ -145,6 +149,7 @@
             <h2>Step 8: Quarter-Final (Z3) - 2v2 Fights</h2>
             <div id="quarterFinalFightsContainer">
                 </div>
+            <button id="saveAndProceedStep7Btn" class="primary-btn">Save & Proceed to Semi-Final</button>
             <button id="finishQuarterFinalBtn" class="primary-btn" disabled>Finish Quarter-Final & Proceed to Semi-Final</button>
         </section>
 
@@ -152,6 +157,7 @@
             <h2>Semi-Final (Z4) - 1v1 Fights</h2>
             <div id="semiFinalFightsContainer">
                 </div>
+            <button id="saveAndProceedStep8Btn" class="primary-btn">Save & Proceed to Final</button>
             <button id="finishSemiFinalBtn" class="primary-btn" disabled>Finish Semi-Final & Proceed to Final</button>
         </section>
 
@@ -159,6 +165,7 @@
             <h2>Final Round & Awards!</h2>
             <div id="finalFightContainer">
                 </div>
+            <button id="saveAndProceedStep9Btn" class="primary-btn">Save & Show Awards</button>
             <button id="showAwardsBtn" class="primary-btn" disabled>Show Awards</button>
             <div id="awardsContainer" class="card awards-card" style="display: none;">
                 <h3>Tournament Prizes</h3>
