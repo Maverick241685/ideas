@@ -10,11 +10,12 @@ let quarterFinalWinners = []; // Winners of Quarter-Finals (4 players)
 let semiFinalWinners = []; // Winners of Semi-Finals (2 players)
 let semiFinalLosers = []; // Losers of Semi-Finals (2 players)
 
-// Global variables for Firebase (initialized in index.html)
-// const db = firebase.firestore(); // This is now initialized globally in index.html
+// --- Global variables for tournament management ---
+let currentActiveTournamentId = null; // Stores the ID of the currently loaded/active tournament
 
-// Tournament ID for saving/loading
-const TOURNAMENT_DOC_ID = 'currentTournament';
+// Tournament ID for saving/loading (now dynamic, but kept for save calls where an ID isn't explicitly passed)
+// This will be used when saving the *current* state of the *active* tournament.
+const DEFAULT_DOC_ID = 'defaultCurrentTournament'; // A fallback/initial ID
 
 // --- DOM Elements ---
 const playerNameInput = document.getElementById('playerNameInput');
@@ -64,8 +65,8 @@ const newPlayerNameInput = document.getElementById('newPlayerNameInput');
 const replacePlayerBtn = document.getElementById('replacePlayerBtn');
 const replacementStatusMessage = document.getElementById('replacementStatusMessage');
 
-// Step-specific Save & Proceed buttons
-const loadTournamentBtn = document.getElementById('loadTournamentBtn'); // Only this remains for initial load
+// Step-specific Save & Proceed buttons (now these will save to currentActiveTournamentId)
+const manageTournamentsBtn = document.getElementById('manageTournamentsBtn'); // Renamed from loadTournamentBtn
 const saveAndProceedStep2Btn = document.getElementById('saveAndProceedStep2Btn');
 const saveAndProceedStep3Btn = document.getElementById('saveAndProceedStep3Btn');
 const saveAndProceedStep4Btn = document.getElementById('saveAndProceedStep4Btn');
@@ -74,6 +75,14 @@ const saveAndProceedStep6Btn = document.getElementById('saveAndProceedStep6Btn')
 const saveAndProceedStep7Btn = document.getElementById('saveAndProceedStep7Btn');
 const saveAndProceedStep8Btn = document.getElementById('saveAndProceedStep8Btn');
 const saveAndProceedStep9Btn = document.getElementById('saveAndProceedStep9Btn');
+
+// --- New Tournament Management DOM Elements ---
+const tournamentManagementSection = document.getElementById('tournament-management-section');
+const saveTournamentNameInput = document.getElementById('saveTournamentNameInput');
+const saveNewTournamentBtn = document.getElementById('saveNewTournamentBtn');
+const savedTournamentsList = document.getElementById('savedTournamentsList');
+const saveStatusMessage = document.getElementById('saveStatusMessage');
+const closeTournamentManagerBtn = document.getElementById('closeTournamentManagerBtn');
 
 
 // --- Helper Functions ---
@@ -103,7 +112,8 @@ function showSection(sectionToShow) {
         round2Section,
         quarterFinalSection,
         semiFinalSection,
-        finalSection
+        finalSection,
+        tournamentManagementSection // Add the new management section
     ];
     sections.forEach(section => {
         if (section) {
@@ -144,9 +154,18 @@ function renderGroups() {
  * This includes players, groups, scores, and winners from various rounds.
  * @param {string} currentSectionId - The ID of the section that should be active after loading.
  * @param {object} fightResults - An object containing selected winners for current fights (Round 1, Round 2, QF, SF, Final).
+ * @param {string} [tournamentIdToSave=currentActiveTournamentId || DEFAULT_DOC_ID] - The ID of the tournament document to save to.
  */
-async function saveTournamentState(currentSectionId, fightResults = {}) {
-    console.log(`Attempting to save tournament state for section: ${currentSectionId}`);
+async function saveTournamentState(currentSectionId, fightResults = {}, tournamentIdToSave = currentActiveTournamentId || DEFAULT_DOC_ID) {
+    console.log(`Attempting to save tournament state for section: ${currentSectionId} to ID: ${tournamentIdToSave}`);
+    saveStatusMessage.textContent = ''; // Clear previous messages
+
+    if (!tournamentIdToSave) {
+        saveStatusMessage.textContent = 'Error: No tournament ID provided for saving.';
+        saveStatusMessage.className = 'status-message error';
+        console.error('No tournament ID to save to.');
+        return;
+    }
 
     // Transform nested arrays for Firestore compatibility
     const serializableTournamentGroups = {};
@@ -164,6 +183,8 @@ async function saveTournamentState(currentSectionId, fightResults = {}) {
     }
 
     const tournamentState = {
+        name: tournamentIdToSave, // Store the name within the document
+        lastSaved: firebase.firestore.FieldValue.serverTimestamp(), // Timestamp
         players: players,
         tournamentGroups: serializableTournamentGroups, // Save as object
         playerScores: playerScores,
@@ -180,22 +201,26 @@ async function saveTournamentState(currentSectionId, fightResults = {}) {
     console.log('State being prepared for save:', tournamentState);
 
     try {
-        await db.collection('tournaments').doc(TOURNAMENT_DOC_ID).set(tournamentState);
-        console.log('Tournament state saved successfully!');
-        // alert('Tournament state saved successfully!'); // Optional: for debugging, remove in production
+        await db.collection('tournaments').doc(tournamentIdToSave).set(tournamentState);
+        console.log(`Tournament state saved successfully to "${tournamentIdToSave}"!`);
+        saveStatusMessage.textContent = `Tournament "${tournamentIdToSave}" saved successfully!`;
+        saveStatusMessage.className = 'status-message success';
+        currentActiveTournamentId = tournamentIdToSave; // Set as active
     } catch (error) {
         console.error('Error saving tournament state:', error);
-        alert('Error saving tournament state. Check console for details.');
+        saveStatusMessage.textContent = `Error saving tournament "${tournamentIdToSave}": ${error.message}`;
+        saveStatusMessage.className = 'status-message error';
     }
 }
 
 /**
  * Loads the tournament state from Firestore and restores the UI.
+ * @param {string} tournamentId - The ID of the tournament document to load.
  */
-async function loadTournamentState() {
-    console.log('Attempting to load tournament state...');
+async function loadTournamentState(tournamentId) {
+    console.log(`Attempting to load tournament state for ID: ${tournamentId}...`);
     try {
-        const doc = await db.collection('tournaments').doc(TOURNAMENT_DOC_ID).get();
+        const doc = await db.collection('tournaments').doc(tournamentId).get();
         if (doc.exists) {
             const data = doc.data();
             console.log('Tournament data loaded:', data);
@@ -214,8 +239,8 @@ async function loadTournamentState() {
 
 
             // Restore state
-            players.push(...data.players);
-            data.players.forEach(player => { // Re-render player list
+            players.push(...(data.players || []));
+            players.forEach(player => { // Re-render player list
                 const listItem = document.createElement('li');
                 listItem.textContent = player;
                 playerList.appendChild(listItem);
@@ -248,9 +273,10 @@ async function loadTournamentState() {
             semiFinalWinners.push(...(data.semiFinalWinners || []));
             semiFinalLosers.push(...(data.semiFinalLosers || []));
 
-
-            alert('Tournament state loaded successfully!');
+            currentActiveTournamentId = tournamentId; // Set the loaded tournament as active
+            alert(`Tournament "${tournamentId}" loaded successfully!`);
             console.log('State after loading and restoration:', {
+                currentActiveTournamentId: currentActiveTournamentId,
                 players: players,
                 tournamentGroups: window.tournamentGroups,
                 playerScores: playerScores,
@@ -262,18 +288,16 @@ async function loadTournamentState() {
                 semiFinalLosers: semiFinalLosers
             });
 
-            // Re-render UI based on loaded state
+            // Hide the management section and render UI based on loaded state
+            showSection(document.getElementById(data.currentSectionId));
             renderUIFromLoadedState(data.currentSectionId, data.fightResults || {});
 
         } else {
-            console.warn('No saved tournament found in Firestore.');
-            alert('No saved tournament found. Start a new one!');
+            console.warn(`No saved tournament found for ID: ${tournamentId}.`);
+            alert(`No saved tournament found for "${tournamentId}".`);
             // Ensure UI is in initial state if no tournament found
             showSection(document.getElementById('add-players-section'));
-            createGroupsBtn.disabled = players.length !== MAX_PLAYERS;
-            addPlayerBtn.disabled = false;
-            playerNameInput.disabled = false;
-            playerReplacementSection.style.display = 'none'; // Hide replacement section if no groups
+            resetTournamentState(); // Clear any partial data
         }
     } catch (error) {
         console.error('Error loading tournament state:', error);
@@ -281,17 +305,69 @@ async function loadTournamentState() {
     }
 }
 
+/**
+ * Resets all global tournament state variables to their initial empty state.
+ * Used when starting a new tournament or loading a non-existent one.
+ */
+function resetTournamentState() {
+    players.length = 0;
+    playerList.innerHTML = '';
+    Object.keys(playerScores).forEach(key => delete playerScores[key]);
+    advancedPlayers.length = 0;
+    round2Winners.length = 0;
+    quarterFinalWinners.length = 0;
+    semiFinalWinners.length = 0;
+    semiFinalLosers.length = 0;
+    window.tournamentGroups = [];
+    window.round2Groups = [];
+    currentActiveTournamentId = null; // Clear active tournament
+    updatePlayerCount(); // Reset player count UI
+    // Additional UI resets if necessary, e.g., clear fight containers
+    round1FightsContainer.innerHTML = '';
+    round1ScoresContainer.innerHTML = '';
+    round2GroupsContainer.innerHTML = '';
+    round2FightsContainer.innerHTML = '';
+    quarterFinalFightsContainer.innerHTML = '';
+    semiFinalFightsContainer.innerHTML = '';
+    finalFightContainer.innerHTML = '';
+    awardsContainer.innerHTML = '';
+    awardsContainer.style.display = 'none';
+
+    // Reset button states for a fresh start
+    createGroupsBtn.disabled = true;
+    startRound1Btn.disabled = true;
+    finishRound1Btn.disabled = true;
+    selectTopPlayersBtn.disabled = true;
+    startRound2Btn.disabled = true;
+    finishRound2Btn.disabled = true;
+    finishQuarterFinalBtn.disabled = true;
+    finishSemiFinalBtn.disabled = true;
+    showAwardsBtn.disabled = true;
+
+    saveAndProceedStep2Btn.disabled = true;
+    saveAndProceedStep3Btn.disabled = true;
+    saveAndProceedStep4Btn.disabled = true;
+    saveAndProceedStep5Btn.disabled = true;
+    saveAndProceedStep6Btn.disabled = true;
+    saveAndProceedStep7Btn.disabled = true;
+    saveAndProceedStep8Btn.disabled = true;
+    saveAndProceedStep9Btn.disabled = true;
+
+    playerReplacementSection.style.display = 'none';
+}
+
 
 /**
- * Re-renders the UI elements based on the loaded tournament state.
+ * Renders the UI elements based on the loaded tournament state.
  * @param {string} currentSectionId - The ID of the section to display.
  * @param {object} loadedFightResults - Object containing saved fight winners.
  */
 function renderUIFromLoadedState(currentSectionId, loadedFightResults) {
     console.log(`Rendering UI from loaded state. Target section: ${currentSectionId}`);
-    showSection(document.getElementById(currentSectionId)); // Show the target section first
+    // No need to call showSection here, as it's called by loadTournamentState now.
 
-    // Always reset some button states for safety before re-enabling
+    // Reset button states for safety before re-enabling
+    // Many of these are handled by resetTournamentState, but re-assert here for clarity
     createGroupsBtn.disabled = true;
     startRound1Btn.disabled = true;
     finishRound1Btn.disabled = true;
@@ -312,21 +388,27 @@ function renderUIFromLoadedState(currentSectionId, loadedFightResults) {
     saveAndProceedStep8Btn.disabled = true;
     saveAndProceedStep9Btn.disabled = true;
 
+
     // Logic to re-render and enable/disable based on progression
-    if (players.length === MAX_PLAYERS) {
-        createGroupsBtn.disabled = false; // Enable if full players, allows re-creating groups
+    // Start of the tournament or returning to add players
+    if (currentSectionId === 'add-players-section') {
+        createGroupsBtn.disabled = players.length !== MAX_PLAYERS;
+        addPlayerBtn.disabled = false;
+        playerNameInput.disabled = false;
+        playerReplacementSection.style.display = 'none'; // No replacement until groups exist
+    } else {
+        // If past player entry, disable player entry elements
+        addPlayerBtn.disabled = true;
+        playerNameInput.disabled = true;
     }
+
+
     if (window.tournamentGroups && window.tournamentGroups.length > 0) {
         renderGroups(); // Re-render Round 1 groups
         playerReplacementSection.style.display = 'block'; // Show replacement options
         createGroupsBtn.disabled = true; // Once groups exist, 'Create Groups' is typically disabled
-        addPlayerBtn.disabled = true;
-        playerNameInput.disabled = true;
         startRound1Btn.disabled = false; // Always enable if groups exist
         saveAndProceedStep2Btn.disabled = false; // Enable save & proceed for groups section
-    } else {
-        // If groups are not created yet, ensure "create groups" is enabled based on player count
-        createGroupsBtn.disabled = players.length !== MAX_PLAYERS;
     }
 
 
@@ -379,14 +461,12 @@ function renderUIFromLoadedState(currentSectionId, loadedFightResults) {
         generateFinalFight(loadedFightResults); // Re-populate final fight with loaded winner
         showAwardsBtn.disabled = false; // Enable proceed button
         saveAndProceedStep9Btn.disabled = false; // Enable save & proceed
+        // If awards were already shown on save, display them
+        if (awardsContainer.innerHTML.includes('Tournament Prizes')) { // Simple check if awards were likely generated
+             awardsContainer.style.display = 'block';
+        }
     }
-    // If awards were already shown
-    if (currentSectionId === 'final-section' && showAwardsBtn.disabled === false) { // Assuming showAwardsBtn leads to displaying awards within final-section
-        // This means we are at the final stage and the awards button should be clickable.
-        // The awards themselves are generated by clicking the showAwardsBtn.
-        // If we want to *display* them right away on load, we would need to call a displayAwards function here.
-        // For now, it relies on the user clicking 'Show Awards'.
-    }
+
     console.log('UI rendering from loaded state complete.');
 }
 
@@ -526,7 +606,7 @@ createGroupsBtn.addEventListener('click', async () => { // Make async to await s
     startRound1Btn.disabled = false;
     playerReplacementSection.style.display = 'block'; // Show replacement option
 
-    // Save state after group creation
+    // Save state after group creation. If no active tournament, use default.
     console.log("Groups created. Initiating save from createGroupsBtn.");
     await saveTournamentState('groups-section');
 });
@@ -612,11 +692,11 @@ replacePlayerBtn.addEventListener('click', async () => { // Make async to await 
     }
 });
 
+// All saveAndProceed buttons now just call saveTournamentState with the current section.
+// The actual progression is handled by dedicated "Start" or "Finish" buttons.
 saveAndProceedStep2Btn.addEventListener('click', async () => {
-    // Only save the state, don't automatically proceed. The startRound1Btn handles actual progression.
     console.log("Save & Proceed (Step 2) button clicked. Initiating save.");
     await saveTournamentState('groups-section');
-    alert('Groups and Player Replacements saved!');
 });
 
 
@@ -730,7 +810,6 @@ saveAndProceedStep3Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
     console.log("Save & Proceed (Step 3) button clicked. Initiating save for Round 1 fights.");
     await saveTournamentState('round1-section', fightResults); // Save current selections for Round 1
-    alert('Round 1 Fights saved!');
 });
 
 
@@ -771,7 +850,6 @@ function displayRound1Scores() {
 saveAndProceedStep4Btn.addEventListener('click', async () => {
     console.log("Save & Proceed (Step 4) button clicked. Initiating save for Round 1 scores.");
     await saveTournamentState('round1-scores-section'); // Save after scores are displayed
-    alert('Round 1 Scores saved!');
 });
 
 // --- Step 5: Select Top 2 Players for Round 2 ---
@@ -815,7 +893,6 @@ selectTopPlayersBtn.addEventListener('click', async () => { // Make async
 saveAndProceedStep5Btn.addEventListener('click', async () => {
     console.log("Save & Proceed (Step 5) button clicked. Initiating save for advanced players.");
     await saveTournamentState('round2-prep-section');
-    alert('Players for Round 2 saved!');
 });
 
 
@@ -968,7 +1045,6 @@ saveAndProceedStep6Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
     console.log("Save & Proceed (Step 6) button clicked. Initiating save for Round 2 fights.");
     await saveTournamentState('round2-section', fightResults); // Save current selections for Round 2
-    alert('Round 2 Fights saved!');
 });
 
 // --- Step 8: Quarter-Final (Z3) - 2v2 Fights ---
@@ -1058,7 +1134,6 @@ saveAndProceedStep7Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
     console.log("Save & Proceed (Step 7) button clicked. Initiating save for Quarter-Final fights.");
     await saveTournamentState('quarter-final-section', fightResults); // Save current selections for QF
-    alert('Quarter-Final Fights saved!');
 });
 
 // --- Semi-Final (Z4) - 1v1 Fights ---
@@ -1156,7 +1231,6 @@ saveAndProceedStep8Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
     console.log("Save & Proceed (Step 8) button clicked. Initiating save for Semi-Final fights.");
     await saveTournamentState('semi-final-section', fightResults); // Save current selections for SF
-    alert('Semi-Final Fights saved!');
 });
 
 // --- Final Round & Awards ---
@@ -1248,10 +1322,144 @@ saveAndProceedStep9Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
     console.log("Save & Proceed (Step 9) button clicked. Initiating save for Final Round results.");
     await saveTournamentState('final-section', fightResults); // Save current selections for Final
-    alert('Final Round results saved!');
+});
+
+// --- New Tournament Management Functions and Event Listeners ---
+
+/**
+ * Lists all saved tournaments from Firestore in the UI.
+ */
+async function listSavedTournaments() {
+    savedTournamentsList.innerHTML = '<p style="text-align: center; color: #aaa;">Loading saved tournaments...</p>';
+    try {
+        const snapshot = await db.collection('tournaments').orderBy('lastSaved', 'desc').get();
+        if (snapshot.empty) {
+            savedTournamentsList.innerHTML = '<p style="text-align: center; color: #aaa;">No saved tournaments found.</p>';
+            return;
+        }
+
+        savedTournamentsList.innerHTML = ''; // Clear loading message
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const tournamentId = doc.id; // Document ID is the tournament ID
+            const tournamentName = data.name || tournamentId; // Use name field if available, else doc ID
+            const lastSavedDate = data.lastSaved ? data.lastSaved.toDate().toLocaleString() : 'N/A';
+
+            const tournamentEntry = document.createElement('div');
+            tournamentEntry.classList.add('saved-tournament-entry');
+            tournamentEntry.innerHTML = `
+                <span><strong>${tournamentName}</strong> (Last Saved: ${lastSavedDate})</span>
+                <div class="actions">
+                    <button class="load-specific-tournament-btn primary-btn" data-id="${tournamentId}">Load</button>
+                    <button class="delete-tournament-btn primary-btn delete-btn" data-id="${tournamentId}">Delete</button>
+                </div>
+            `;
+            savedTournamentsList.appendChild(tournamentEntry);
+        });
+
+        // Add event listeners for new buttons
+        savedTournamentsList.querySelectorAll('.load-specific-tournament-btn').forEach(button => {
+            button.addEventListener('click', () => loadTournamentState(button.dataset.id));
+        });
+        savedTournamentsList.querySelectorAll('.delete-tournament-btn').forEach(button => {
+            button.addEventListener('click', () => deleteTournament(button.dataset.id, button.closest('.saved-tournament-entry')));
+        });
+
+        console.log('Saved tournaments listed.');
+
+    } catch (error) {
+        console.error('Error listing tournaments:', error);
+        savedTournamentsList.innerHTML = '<p style="text-align: center; color: red;">Error loading tournaments.</p>';
+    }
+}
+
+/**
+ * Deletes a specific tournament from Firestore.
+ * @param {string} tournamentId - The ID of the tournament document to delete.
+ * @param {HTMLElement} elementToRemove - The UI element to remove upon successful deletion.
+ */
+async function deleteTournament(tournamentId, elementToRemove) {
+    if (confirm(`Are you sure you want to delete tournament "${tournamentId}"? This action cannot be undone.`)) {
+        try {
+            await db.collection('tournaments').doc(tournamentId).delete();
+            alert(`Tournament "${tournamentId}" deleted successfully!`);
+            console.log(`Tournament "${tournamentId}" deleted.`);
+            if (elementToRemove) {
+                elementToRemove.remove(); // Remove from UI
+            }
+            if (currentActiveTournamentId === tournamentId) {
+                resetTournamentState(); // Reset if the active tournament was deleted
+                showSection(document.getElementById('add-players-section'));
+                alert('The active tournament was deleted. Starting a new one.');
+            }
+            listSavedTournaments(); // Refresh the list
+        } catch (error) {
+            console.error('Error deleting tournament:', error);
+            alert(`Error deleting tournament "${tournamentId}".`);
+        }
+    }
+}
+
+
+// Event listener for the "Manage Saved Tournaments" button
+manageTournamentsBtn.addEventListener('click', () => {
+    console.log('Manage Tournaments button clicked.');
+    showSection(tournamentManagementSection);
+    listSavedTournaments(); // Populate the list when opening
+});
+
+// Event listener for "Save New Version" button
+saveNewTournamentBtn.addEventListener('click', async () => {
+    const tournamentName = saveTournamentNameInput.value.trim();
+    if (!tournamentName) {
+        saveStatusMessage.textContent = 'Please enter a name for the tournament.';
+        saveStatusMessage.className = 'status-message error';
+        return;
+    }
+    // You could add more robust validation here, e.g., check for duplicate names
+    console.log(`Saving new tournament version: "${tournamentName}"`);
+    await saveTournamentState(
+        currentActiveTournamentId || document.querySelector('.card:not([style*="display: none"]):not(#tournament-management-section)').id || 'add-players-section', // Use current section ID
+        getCurrentFightSelections(),
+        tournamentName
+    );
+    saveTournamentNameInput.value = ''; // Clear input
+    listSavedTournaments(); // Refresh the list
+});
+
+// Event listener for "Close Manager" button
+closeTournamentManagerBtn.addEventListener('click', () => {
+    console.log('Close Tournament Manager button clicked.');
+    // Show the section that was active before opening the manager, or default
+    const currentSection = currentActiveTournamentId ?
+                           (document.getElementById(db.collection('tournaments').doc(currentActiveTournamentId).get().then(doc => doc.data().currentSectionId).catch(()=>'add-players-section')) || document.getElementById('add-players-section'))
+                           : document.getElementById('add-players-section');
+    showSection(currentSection);
+    // Asynchronously update to potentially show the last known section, if it could be retrieved
+    if (currentActiveTournamentId) {
+        db.collection('tournaments').doc(currentActiveTournamentId).get().then(doc => {
+            if (doc.exists) {
+                showSection(document.getElementById(doc.data().currentSectionId));
+            } else {
+                showSection(document.getElementById('add-players-section'));
+            }
+        }).catch(err => {
+            console.error("Error getting current section for active tournament:", err);
+            showSection(document.getElementById('add-players-section'));
+        });
+    } else {
+        showSection(document.getElementById('add-players-section'));
+    }
 });
 
 
 // --- Initial Setup ---
-loadTournamentBtn.addEventListener('click', loadTournamentState);
-updatePlayerCount(); // Set initial player count to 0
+// When the page loads, we no longer immediately load a default tournament.
+// Instead, we show the "Add Players" section, and the user can click "Manage Tournaments"
+// to load an existing one or start adding players for a new one.
+// Initialize by resetting state and showing the add players section.
+document.addEventListener('DOMContentLoaded', () => {
+    resetTournamentState(); // Ensure a clean state on page load
+    showSection(document.getElementById('add-players-section')); // Show the initial section
+});
