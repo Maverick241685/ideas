@@ -5,11 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournament Manager</title>
     <link rel="stylesheet" href="style.css">
+
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+    apiKey: "AIzaSyAzNQeCCZeQTQKV2E0mpSH7krKD7gtdkfQ",
+    authDomain: "tournament-sage.firebaseapp.com",
+    projectId: "tournament-sage",
+    storageBucket: "tournament-sage.firebasestorage.app",
+    messagingSenderId: "611860863762",
+    appId: "1:611860863762:web:f491d26d0d50349ec031cb",
+    measurementId: "G-SQ5TEBB92Z"
+  };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore(); // Initialize Firestore
+    </script>
 </head>
 <body>
     <div class="container">
         <h1>Tournament Manager</h1>
-        <button id="resetProgressBtn" class="reset-btn">Reset All Progress</button>
+
         <div class="tournament-summary card">
             <h2>Tournament Overview</h2>
             <p>
@@ -70,6 +88,8 @@
                     </ul>
             </div>
             <button id="createGroupsBtn" class="primary-btn" disabled>Create Groups (Need 40 Players)</button>
+             <button id="saveTournamentBtn" class="primary-btn">Save Tournament</button>
+            <button id="loadTournamentBtn" class="primary-btn">Load Last Tournament</button>
         </section>
 
         <section id="groups-section" class="card" style="display: none;">
