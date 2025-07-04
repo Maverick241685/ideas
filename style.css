@@ -11,7 +11,7 @@ body {
 }
 
 .container {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.7);
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 30px;
@@ -33,7 +33,7 @@ h2 {
 }
 
 .card {
-    background-color: #fdfdfd;
+    background-color: rgba(255, 255, 255, 0.85);
     border: 1px solid #e0e0e0;
     border-radius: 6px;
     padding: 20px;
