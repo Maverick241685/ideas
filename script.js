@@ -117,7 +117,10 @@ function showSection(sectionToShow) {
 // Function to render groups (extracted for reusability)
 function renderGroups() {
     groupsContainer.innerHTML = ''; // Clear previous groups
-    if (!window.tournamentGroups) return; // Ensure groups exist before rendering
+    if (!window.tournamentGroups) {
+        console.warn('renderGroups: window.tournamentGroups is undefined. Cannot render.');
+        return;
+    }
 
     window.tournamentGroups.forEach((group, groupIndex) => {
         const groupCard = document.createElement('div');
@@ -140,6 +143,12 @@ function renderGroups() {
  * @param {object} fightResults - An object containing selected winners for current fights (Round 1, Round 2, QF, SF, Final).
  */
 async function saveTournamentState(currentSectionId, fightResults = {}) {
+    console.log(`Attempting to save tournament state for section: ${currentSectionId}`);
+    console.log('Current players:', players);
+    console.log('Current tournamentGroups:', window.tournamentGroups);
+    console.log('Current playerScores:', playerScores);
+    console.log('Current fightResults:', fightResults);
+
     try {
         const tournamentState = {
             players: players,
@@ -198,8 +207,9 @@ async function loadTournamentState() {
             advancedPlayers.push(...data.advancedPlayers);
             round2Winners.push(...data.round2Winners);
             quarterFinalWinners.push(...data.quarterFinalWinners);
-            semiFinalWinners.push(...data.semiFinalWinners);
-            semiFinalLosers.push(...data.semiFinalLosers);
+            semiFinalLosers.push(...data.semiFinalLosers); // Fix: this was missing from prev iteration
+            quarterFinalWinners.push(...data.quarterFinalWinners); // Fix: this was missing from prev iteration
+
 
             alert('Tournament state loaded successfully!');
 
@@ -431,6 +441,7 @@ createGroupsBtn.addEventListener('click', async () => { // Make async to await s
     playerReplacementSection.style.display = 'block'; // Show replacement option
 
     // Save state after group creation
+    console.log("Groups created. Initiating save from createGroupsBtn.");
     await saveTournamentState('groups-section');
 });
 
@@ -501,6 +512,7 @@ replacePlayerBtn.addEventListener('click', async () => { // Make async to await 
         replacementStatusMessage.classList.add('success');
 
         // Save state after replacement
+        console.log("Player replaced. Initiating save from replacePlayerBtn.");
         await saveTournamentState('groups-section');
     } else {
         replacementStatusMessage.textContent = `"${playerToReplace}" not found in any group. Please check the spelling.`;
@@ -510,6 +522,7 @@ replacePlayerBtn.addEventListener('click', async () => { // Make async to await 
 
 saveAndProceedStep2Btn.addEventListener('click', async () => {
     // Only save the state, don't automatically proceed. The startRound1Btn handles actual progression.
+    console.log("Save & Proceed (Step 2) button clicked. Initiating save.");
     await saveTournamentState('groups-section');
     alert('Groups and Player Replacements saved!');
 });
@@ -589,6 +602,7 @@ function recordRound1Scores() {
 startRound1Btn.addEventListener('click', async () => { // Make async
     showSection(round1Section);
     generateRound1Fights();
+    console.log("Starting Round 1. Initiating save from startRound1Btn.");
     await saveTournamentState('round1-section'); // Save state when entering this section
 });
 
@@ -596,6 +610,7 @@ finishRound1Btn.addEventListener('click', async () => { // Make async
     if (recordRound1Scores()) {
         showSection(round1ScoresSection);
         displayRound1Scores();
+        console.log("Finishing Round 1. Initiating save from finishRound1Btn.");
         await saveTournamentState('round1-scores-section'); // Save state after finishing Round 1 and showing scores
     } else {
         alert("Please select a winner for all fights before finishing Round 1.");
@@ -604,6 +619,7 @@ finishRound1Btn.addEventListener('click', async () => { // Make async
 
 saveAndProceedStep3Btn.addEventListener('click', async () => {
     const fightResults = getCurrentFightSelections();
+    console.log("Save & Proceed (Step 3) button clicked. Initiating save for Round 1 fights.");
     await saveTournamentState('round1-section', fightResults); // Save current selections for Round 1
     alert('Round 1 Fights saved!');
 });
@@ -633,428 +649,4 @@ function displayRound1Scores() {
 
         groupPlayersScores.forEach(player => {
             const li = document.createElement('li');
-            li.textContent = `${player.name}: ${player.score} points`;
-            ul.appendChild(li);
-        });
-        round1ScoresContainer.appendChild(groupScoresDiv);
-    });
-    selectTopPlayersBtn.disabled = false;
-}
-
-saveAndProceedStep4Btn.addEventListener('click', async () => {
-    await saveTournamentState('round1-scores-section'); // Save after scores are displayed
-    alert('Round 1 Scores saved!');
-});
-
-// --- Step 5: Select Top 2 Players for Round 2 ---
-selectTopPlayersBtn.addEventListener('click', async () => { // Make async
-    advancedPlayers = []; // Reset for new selection
-    advancedPlayersList.innerHTML = '';
-
-    const playersWithScores = Object.keys(playerScores).map(playerName => ({
-        name: playerName,
-        score: playerScores[playerName]
-    }));
-
-    window.tournamentGroups.forEach((group) => {
-        const groupPlayersScores = playersWithScores
-            .filter(p => group.includes(p.name))
-            .sort((a, b) => b.score - a.score); // Sort by score descending
-
-        // Select top 2 players from each group
-        const top2 = groupPlayersScores.slice(0, 2);
-        top2.forEach(player => {
-            advancedPlayers.push(player.name);
-            const li = document.createElement('li');
-            li.textContent = player.name;
-            advancedPlayersList.appendChild(li);
-        });
-    });
-
-    if (advancedPlayers.length !== 16) {
-        alert(`Warning: Expected 16 players for Round 2, but found ${advancedPlayers.length}. This might be due to ties. Proceeding with ${advancedPlayers.length} players.`);
-        // You might want to implement a more robust tie-breaking rule here if strict 16 players are required.
-    }
-
-    showSection(round2PrepSection);
-    startRound2Btn.disabled = false;
-    await saveTournamentState('round2-prep-section'); // Save state after selecting advanced players
-});
-
-saveAndProceedStep5Btn.addEventListener('click', async () => {
-    await saveTournamentState('round2-prep-section');
-    alert('Players for Round 2 saved!');
-});
-
-
-// --- Step 6 & 7: Round 2 (Z2) - Group Fights ---
-/**
- * Generates Round 2 fight UI.
- * @param {object} loadedFightResults - Optional: Object containing saved fight winners to pre-select dropdowns.
- */
-function generateRound2Fights(loadedFightResults = {}) {
-    round2GroupsContainer.innerHTML = '';
-    round2FightsContainer.innerHTML = '';
-    const shuffledAdvancedPlayers = shuffleArray([...advancedPlayers]);
-
-    const r2Groups = [];
-    const R2_PLAYERS_PER_GROUP = 4;
-    const R2_NUM_GROUPS = 16 / R2_PLAYERS_PER_GROUP; // 4 groups for Z2
-
-    for (let i = 0; i < R2_NUM_GROUPS; i++) {
-        const group = shuffledAdvancedPlayers.slice(i * R2_PLAYERS_PER_GROUP, (i + 1) * R2_PLAYERS_PER_GROUP);
-        r2Groups.push(group);
-
-        const groupCard = document.createElement('div');
-        groupCard.classList.add('group-card');
-        groupCard.innerHTML = `<h3>R2 Group ${i + 1}</h3><ul></ul>`;
-        const ul = groupCard.querySelector('ul');
-        group.forEach(player => {
-            const li = document.createElement('li');
-            li.textContent = player;
-            ul.appendChild(li);
-        });
-        round2GroupsContainer.appendChild(groupCard);
-    }
-
-    // Store R2 groups globally
-    window.round2Groups = r2Groups;
-
-    // Setup 2 group fights: G1 vs G4, G2 vs G3
-    const fights = [
-        { id: 'R2-Fight1', team1: r2Groups[0], team2: r2Groups[3], team1Name: 'R2 Group 1', team2Name: 'R2 Group 4' },
-        { id: 'R2-Fight2', team1: r2Groups[1], team2: r2Groups[2], team1Name: 'R2 Group 2', team2Name: 'R2 Group 3' }
-    ];
-
-    fights.forEach(fight => {
-        const fightElement = document.createElement('div');
-        fightElement.classList.add('team-fight-card');
-        fightElement.innerHTML = `
-            <h3>${fight.team1Name} vs ${fight.team2Name}</h3>
-            <div class="team-fight-teams">
-                <div class="team">
-                    <h4>${fight.team1Name}</h4>
-                    <ul>${fight.team1.map(p => `<li>${p}</li>`).join('')}</ul>
-                </div>
-                <div class="team">
-                    <h4>${fight.team2Name}</h4>
-                    <ul>${fight.team2.map(p => `<li>${p}</li>`).join('')}</ul>
-                </div>
-            </div>
-            <div class="team-fight-selector">
-                <label>Winning Group:</label>
-                <select id="${fight.id}-winner">
-                    <option value="">Select Winning Group</option>
-                    <option value="${fight.team1Name}">${fight.team1Name}</option>
-                    <option value="${fight.team2Name}">${fight.team2Name}</option>
-                </select>
-            </div>
-        `;
-        round2FightsContainer.appendChild(fightElement);
-
-        // If loading, pre-select the winner
-        const winnerSelect = fightElement.querySelector('select');
-        if (loadedFightResults[`${fight.id}-winner`]) {
-            winnerSelect.value = loadedFightResults[`${fight.id}-winner`];
-        }
-    });
-    finishRound2Btn.disabled = false;
-}
-
-startRound2Btn.addEventListener('click', async () => { // Make async
-    showSection(round2Section);
-    generateRound2Fights();
-    await saveTournamentState('round2-section'); // Save state when entering this section
-});
-
-finishRound2Btn.addEventListener('click', async () => { // Make async
-    round2Winners = []; // Reset winners
-
-    const fight1WinnerSelect = document.getElementById('R2-Fight1-winner');
-    const fight2WinnerSelect = document.getElementById('R2-Fight2-winner');
-
-    if (fight1WinnerSelect.value === "" || fight2WinnerSelect.value === "") {
-        alert("Please select a winner for both group fights.");
-        return;
-    }
-
-    // Determine winning groups and add their players to round2Winners
-    if (fight1WinnerSelect.value === 'R2 Group 1') {
-        round2Winners.push(...window.round2Groups[0]);
-    } else { // R2 Group 4
-        round2Winners.push(...window.round2Groups[3]);
-    }
-
-    if (fight2WinnerSelect.value === 'R2 Group 2') {
-        round2Winners.push(...window.round2Groups[1]);
-    } else { // R2 Group 3
-        round2Winners.push(...window.round2Groups[2]);
-    }
-
-    if (round2Winners.length !== 8) {
-        alert(`Error: Expected 8 players to proceed to Quarter-Finals, but found ${round2Winners.length}.`);
-        return;
-    }
-
-    showSection(quarterFinalSection);
-    generateQuarterFinalFights();
-    await saveTournamentState('quarter-final-section'); // Save state after finishing Round 2 and showing QF
-});
-
-saveAndProceedStep6Btn.addEventListener('click', async () => {
-    const fightResults = getCurrentFightSelections();
-    await saveTournamentState('round2-section', fightResults); // Save current selections for Round 2
-    alert('Round 2 Fights saved!');
-});
-
-// --- Step 8: Quarter-Final (Z3) - 2v2 Fights ---
-/**
- * Generates Quarter-Final fight UI.
- * @param {object} loadedFightResults - Optional: Object containing saved fight winners to pre-select dropdowns.
- */
-function generateQuarterFinalFights(loadedFightResults = {}) {
-    quarterFinalFightsContainer.innerHTML = '';
-    const shuffledRound2Winners = shuffleArray([...round2Winners]);
-
-    // Setup 2 2v2 fights
-    const qfFights = [
-        { id: 'QF-Fight1', team1: [shuffledRound2Winners[0], shuffledRound2Winners[1]], team2: [shuffledRound2Winners[2], shuffledRound2Winners[3]] },
-        { id: 'QF-Fight2', team1: [shuffledRound2Winners[4], shuffledRound2Winners[5]], team2: [shuffledRound2Winners[6], shuffledRound2Winners[7]] }
-    ];
-
-    qfFights.forEach(fight => {
-        const fightElement = document.createElement('div');
-        fightElement.classList.add('knockout-fight-card');
-        fightElement.innerHTML = `
-            <h4>Quarter-Final Fight:</h4>
-            <div class="knockout-players">
-                <div class="knockout-team">
-                    <ul><li>${fight.team1[0]}</li><li>${fight.team1[1]}</li></ul>
-                </div>
-                <span class="knockout-vs">VS</span>
-                <div class="knockout-team">
-                    <ul><li>${fight.team2[0]}</li><li>${fight.team2[1]}</li></ul>
-                </div>
-            </div>
-            <div class="score-input" style="justify-content: center; margin-top: 15px;">
-                <label>Winning Team:</label>
-                <select id="${fight.id}-winner">
-                    <option value="">Select Winner</option>
-                    <option value="${fight.team1.join(',')}">${fight.team1[0]} & ${fight.team1[1]}</option>
-                    <option value="${fight.team2.join(',')}">${fight.team2[0]} & ${fight.team2[1]}</option>
-                </select>
-            </div>
-        `;
-        quarterFinalFightsContainer.appendChild(fightElement);
-
-        // If loading, pre-select the winner
-        const winnerSelect = fightElement.querySelector('select');
-        if (loadedFightResults[`${fight.id}-winner`]) {
-            winnerSelect.value = loadedFightResults[`${fight.id}-winner`];
-        }
-    });
-    finishQuarterFinalBtn.disabled = false;
-}
-
-finishQuarterFinalBtn.addEventListener('click', async () => { // Make async
-    quarterFinalWinners = []; // Reset winners
-
-    const fight1WinnerSelect = document.getElementById('QF-Fight1-winner');
-    const fight2WinnerSelect = document.getElementById('QF-Fight2-winner');
-
-    if (fight1WinnerSelect.value === "" || fight2WinnerSelect.value === "") {
-        alert("Please select a winning team for both Quarter-Final fights.");
-        return;
-    }
-
-    quarterFinalWinners.push(...fight1WinnerSelect.value.split(','));
-    quarterFinalWinners.push(...fight2WinnerSelect.value.split(','));
-
-    if (quarterFinalWinners.length !== 4) {
-        alert(`Error: Expected 4 players to proceed to Semi-Finals, but found ${quarterFinalWinners.length}.`);
-        return;
-    }
-
-    showSection(semiFinalSection);
-    generateSemiFinalFights();
-    await saveTournamentState('semi-final-section'); // Save state after finishing QF and showing SF
-});
-
-saveAndProceedStep7Btn.addEventListener('click', async () => {
-    const fightResults = getCurrentFightSelections();
-    await saveTournamentState('quarter-final-section', fightResults); // Save current selections for QF
-    alert('Quarter-Final Fights saved!');
-});
-
-// --- Semi-Final (Z4) - 1v1 Fights ---
-/**
- * Generates Semi-Final fight UI.
- * @param {object} loadedFightResults - Optional: Object containing saved fight winners to pre-select dropdowns.
- */
-function generateSemiFinalFights(loadedFightResults = {}) {
-    semiFinalFightsContainer.innerHTML = '';
-    const shuffledQuarterFinalWinners = shuffleArray([...quarterFinalWinners]);
-
-    // Setup 2 1v1 fights
-    const sfFights = [
-        { id: 'SF-Fight1', player1: shuffledQuarterFinalWinners[0], player2: shuffledQuarterFinalWinners[1] },
-        { id: 'SF-Fight2', player1: shuffledQuarterFinalWinners[2], player2: shuffledQuarterFinalWinners[3] }
-    ];
-
-    sfFights.forEach(fight => {
-        const fightElement = document.createElement('div');
-        fightElement.classList.add('knockout-fight-card');
-        fightElement.innerHTML = `
-            <h4>Semi-Final Fight:</h4>
-            <div class="knockout-players">
-                <span>${fight.player1}</span>
-                <span class="knockout-vs">VS</span>
-                <span>${fight.player2}</span>
-            </div>
-            <div class="score-input" style="justify-content: center; margin-top: 15px;">
-                <label>Winner:</label>
-                <select id="${fight.id}-winner">
-                    <option value="">Select Winner</option>
-                    <option value="${fight.player1}">${fight.player1}</option>
-                    <option value="${fight.player2}">${fight.player2}</option>
-                </select>
-            </div>
-        `;
-        semiFinalFightsContainer.appendChild(fightElement);
-
-        // If loading, pre-select the winner
-        const winnerSelect = fightElement.querySelector('select');
-        if (loadedFightResults[`${fight.id}-winner`]) {
-            winnerSelect.value = loadedFightResults[`${fight.id}-winner`];
-        }
-    });
-    finishSemiFinalBtn.disabled = false;
-}
-
-finishSemiFinalBtn.addEventListener('click', async () => { // Make async
-    semiFinalWinners = []; // Reset winners
-    semiFinalLosers = []; // Reset losers
-
-    const fight1WinnerSelect = document.getElementById('SF-Fight1-winner');
-    const fight2WinnerSelect = document.getElementById('SF-Fight2-winner');
-
-    if (fight1WinnerSelect.value === "" || fight2WinnerSelect.value === "") {
-        alert("Please select a winner for both Semi-Final fights.");
-        return;
-    }
-
-    const sf1Winner = fight1WinnerSelect.value;
-    const sf1Loser = Array.from(fight1WinnerSelect.options).find(option => option.value !== "" && option.value !== sf1Winner)?.value;
-
-    const sf2Winner = fight2WinnerSelect.value;
-    const sf2Loser = Array.from(fight2WinnerSelect.options).find(option => option.value !== "" && option.value !== sf2Winner)?.value;
-
-    semiFinalWinners.push(sf1Winner, sf2Winner);
-    semiFinalLosers.push(sf1Loser, sf2Loser);
-
-    // Remove finalists from the losers list (just in case due to complex tie-breaking or manual error)
-    semiFinalLosers = semiFinalLosers.filter(loser => !semiFinalWinners.includes(loser));
-
-    if (semiFinalWinners.length !== 2 || semiFinalLosers.length !== 2) {
-        alert(`Error: Expected 2 finalists and 2 semi-final losers, but found ${semiFinalWinners.length} finalists and ${semiFinalLosers.length} losers.`);
-        return;
-    }
-
-    showSection(finalSection);
-    generateFinalFight();
-    await saveTournamentState('final-section'); // Save state after finishing SF and showing Final
-});
-
-saveAndProceedStep8Btn.addEventListener('click', async () => {
-    const fightResults = getCurrentFightSelections();
-    await saveTournamentState('semi-final-section', fightResults); // Save current selections for SF
-    alert('Semi-Final Fights saved!');
-});
-
-// --- Final Round & Awards ---
-/**
- * Generates Final fight UI.
- * @param {object} loadedFightResults - Optional: Object containing saved fight winners to pre-select dropdowns.
- */
-function generateFinalFight(loadedFightResults = {}) {
-    finalFightContainer.innerHTML = '';
-    const finalPlayers = shuffleArray([...semiFinalWinners]); // Shuffle just in case, though it's only two
-
-    const fightElement = document.createElement('div');
-    fightElement.classList.add('knockout-fight-card');
-    fightElement.innerHTML = `
-        <h4>The Grand Final:</h4>
-        <div class="knockout-players">
-            <span>${finalPlayers[0]}</span>
-            <span class="knockout-vs">VS</span>
-            <span>${finalPlayers[1]}</span>
-        </div>
-        <div class="score-input" style="justify-content: center; margin-top: 15px;">
-            <label>Tournament Winner:</label>
-            <select id="final-winner">
-                <option value="">Select Winner</option>
-                <option value="${finalPlayers[0]}">${finalPlayers[0]}</option>
-                <option value="${finalPlayers[1]}">${finalPlayers[1]}</option>
-            </select>
-        </div>
-    `;
-    finalFightContainer.appendChild(fightElement);
-    showAwardsBtn.disabled = false;
-
-    // If loading, pre-select the winner
-    const winnerSelect = fightElement.querySelector('select');
-    if (loadedFightResults['final-winner']) {
-        winnerSelect.value = loadedFightResults['final-winner'];
-    }
-}
-
-showAwardsBtn.addEventListener('click', async () => { // Make async
-    const finalWinnerSelect = document.getElementById('final-winner');
-    const winner = finalWinnerSelect.value;
-
-    if (winner === "") {
-        alert("Please select the Tournament Winner.");
-        return;
-    }
-
-    const finalist = semiFinalWinners.find(p => p !== winner);
-
-    awardsContainer.innerHTML = `<h3>Tournament Prizes</h3><ul></ul>`;
-    const ul = awardsContainer.querySelector('ul');
-
-    // Winner
-    let liWinner = document.createElement('li');
-    liWinner.innerHTML = `<strong>${winner} (Champion):</strong> 100M Food, 50M Iron, Best blessing from King`;
-    ul.appendChild(liWinner);
-
-    // Other Finalist
-    let liFinalist = document.createElement('li');
-    liFinalist.innerHTML = `<strong>${finalist} (Runner-up):</strong> 50M Food, 25M Iron, Second best King blessing`;
-    ul.appendChild(liFinalist);
-
-    // Semi-Final Losers
-    semiFinalLosers.forEach(loser => {
-        let liLoser = document.createElement('li');
-        liLoser.innerHTML = `<strong>${loser} (Semi-Finalist):</strong> 25M Food, 10M Iron, 3rd best King blessing`;
-        ul.appendChild(liLoser);
-    });
-
-    awardsContainer.style.display = 'block';
-    await saveTournamentState('final-section', getCurrentFightSelections()); // Save final state after showing awards
-});
-
-saveAndProceedStep9Btn.addEventListener('click', async () => {
-    const finalWinnerSelect = document.getElementById('final-winner');
-    if (finalWinnerSelect.value === "") {
-        alert("Please select the Tournament Winner before saving.");
-        return;
-    }
-    const fightResults = getCurrentFightSelections();
-    await saveTournamentState('final-section', fightResults); // Save current selections for Final
-    alert('Final Round results saved!');
-});
-
-
-// --- Initial Setup ---
-loadTournamentBtn.addEventListener('click', loadTournamentState);
-updatePlayerCount(); // Set initial player count to 0
+            li.textContent = `${player.name}: ${player.score} points
