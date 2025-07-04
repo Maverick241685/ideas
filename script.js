@@ -147,34 +147,39 @@ function renderGroups() {
  */
 async function saveTournamentState(currentSectionId, fightResults = {}) {
     console.log(`Attempting to save tournament state for section: ${currentSectionId}`);
-    console.log('State being prepared for save:', {
+
+    // Transform nested arrays for Firestore compatibility
+    const serializableTournamentGroups = {};
+    if (window.tournamentGroups && window.tournamentGroups.length > 0) {
+        window.tournamentGroups.forEach((group, index) => {
+            serializableTournamentGroups[`group${index}`] = group;
+        });
+    }
+
+    const serializableRound2Groups = {};
+    if (window.round2Groups && window.round2Groups.length > 0) {
+        window.round2Groups.forEach((group, index) => {
+            serializableRound2Groups[`group${index}`] = group;
+        });
+    }
+
+    const tournamentState = {
         players: players,
-        tournamentGroups: window.tournamentGroups || [], // Round 1 groups
+        tournamentGroups: serializableTournamentGroups, // Save as object
         playerScores: playerScores,
         advancedPlayers: advancedPlayers,
-        round2Groups: window.round2Groups || [], // Round 2 groups
+        round2Groups: serializableRound2Groups, // Save as object
         round2Winners: round2Winners,
         quarterFinalWinners: quarterFinalWinners,
         semiFinalWinners: semiFinalWinners,
         semiFinalLosers: semiFinalLosers,
         currentSectionId: currentSectionId, // Save the section to return to
         fightResults: fightResults // Save results of active fights
-    });
+    };
+
+    console.log('State being prepared for save:', tournamentState);
 
     try {
-        const tournamentState = {
-            players: players,
-            tournamentGroups: window.tournamentGroups || [], // Round 1 groups
-            playerScores: playerScores,
-            advancedPlayers: advancedPlayers,
-            round2Groups: window.round2Groups || [], // Round 2 groups
-            round2Winners: round2Winners,
-            quarterFinalWinners: quarterFinalWinners,
-            semiFinalWinners: semiFinalWinners,
-            semiFinalLosers: semiFinalLosers,
-            currentSectionId: currentSectionId, // Save the section to return to
-            fightResults: fightResults // Save results of active fights
-        };
         await db.collection('tournaments').doc(TOURNAMENT_DOC_ID).set(tournamentState);
         console.log('Tournament state saved successfully!');
         // alert('Tournament state saved successfully!'); // Optional: for debugging, remove in production
@@ -217,10 +222,26 @@ async function loadTournamentState() {
             });
             updatePlayerCount(); // Update player count and button states
 
-            Object.assign(playerScores, data.playerScores); // Restore player scores
+            Object.assign(playerScores, data.playerScores || {}); // Restore player scores, handle if undefined
 
-            window.tournamentGroups = data.tournamentGroups || [];
-            window.round2Groups = data.round2Groups || [];
+            // Reconstruct tournamentGroups from object
+            if (data.tournamentGroups) {
+                const loadedGroups = Object.keys(data.tournamentGroups)
+                    .sort((a, b) => parseInt(a.replace('group', '')) - parseInt(b.replace('group', '')))
+                    .map(key => data.tournamentGroups[key]);
+                window.tournamentGroups.push(...loadedGroups);
+                console.log('Restored window.tournamentGroups:', window.tournamentGroups);
+            }
+
+            // Reconstruct round2Groups from object
+            if (data.round2Groups) {
+                const loadedR2Groups = Object.keys(data.round2Groups)
+                    .sort((a, b) => parseInt(a.replace('group', '')) - parseInt(b.replace('group', '')))
+                    .map(key => data.round2Groups[key]);
+                window.round2Groups.push(...loadedR2Groups);
+                console.log('Restored window.round2Groups:', window.round2Groups);
+            }
+
             advancedPlayers.push(...(data.advancedPlayers || []));
             round2Winners.push(...(data.round2Winners || []));
             quarterFinalWinners.push(...(data.quarterFinalWinners || []));
